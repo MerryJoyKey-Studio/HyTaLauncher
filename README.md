@@ -26,6 +26,15 @@
 
 ---
 
+<summary><strong>TODO — План работ / Roadmap</strong></summary>
+
+- [ ] **Автоустановка руссификатора**
+- [ ] **Автоустановка онлайн-фикса**
+
+
+
+---
+
 ## Features / Возможности
 
 - Auto-download and install game files
@@ -149,6 +158,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
 
 
