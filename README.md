@@ -1,4 +1,4 @@
-# HyTaLauncher
+# HyTaLauncher - Лаунчер для Hytale
 
 <p align="center">
   <img src="HyTaLauncher/Resources/icon.ico" alt="HyTaLauncher" width="128"/>
@@ -120,7 +120,7 @@ This is an **unofficial fan project** and is not affiliated with, endorsed by, o
 - Please support the official game by purchasing it when available
 
 ### RU:
-Это **неофициальный фан-проект**, который не связан с Hypixel Studios или Hytale и не одобрен ими.
+Это **неофициальный фан-проект** лаунчера для Хайтейла, который не связан с Hypixel Studios или Hytale и не одобрен ими.
 
 - Программа предоставляется "как есть" без каких-либо гарантий
 - Автор не несёт ответственности за использование данного ПО
@@ -145,4 +145,5 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
