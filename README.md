@@ -1,7 +1,7 @@
 # HyTaLauncher
 
 <p align="center">
-  <img src="HytaleLauncher/Resources/icon.ico" alt="HyTaLauncher" width="128"/>
+  <img src="HyTaLauncher/Resources/icon.ico" alt="HyTaLauncher" width="128"/>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Go to [**Releases**](../../releases) and download:
 <details>
 <summary>Click to expand / Нажмите чтобы развернуть</summary>
 
-*Screenshots coming soon*
+![Main](https://i.imgur.com/HERBi9U.png)
 
 </details>
 
@@ -137,5 +137,6 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 ---
 
 ## License / Лицензия
+
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
