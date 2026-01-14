@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>HyTaLauncher</AssemblyName>
+    <RootNamespace>HyTaLauncher</RootNamespace>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Fonts\cinzel_regular.ttf" />
+    <Resource Include="Fonts\cinzel_bold.ttf" />
+    <Resource Include="Resources\icon.ico" />
+    <Resource Include="Languages\en.json" />
+    <Resource Include="Languages\ru.json" />
+  </ItemGroup>
+
+</Project>
