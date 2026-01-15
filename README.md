@@ -118,6 +118,7 @@ HyTaLauncher includes CurseForge integration for managing Hytale mods:
 - Easy uninstall
 
 Mods are installed to: `%AppData%\Hytale\install\release\package\game\latest\Client\UserData\Mods`
+v1.0.4: `Hytale\UserData\Mods`
 
 ---
 
@@ -164,6 +165,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
 
 
