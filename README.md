@@ -14,6 +14,7 @@
 </p>
 
 <p align="center">
+  <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/MerryJoyKey-Studio/HyTaLauncher/total">
   <img src="https://img.shields.io/badge/Platform-Windows-blue?style=flat-square"/>
   <img src="https://img.shields.io/badge/Framework-.NET%208-purple?style=flat-square"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
@@ -163,6 +164,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
 
 
