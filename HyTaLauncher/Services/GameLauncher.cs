@@ -691,7 +691,7 @@ namespace HyTaLauncher.Services
             if (!File.Exists(clientPath))
                 throw new FileNotFoundException("Game client not found");
 
-            var uuid = Guid.NewGuid().ToString();
+            var uuid = GetOrCreateUuid(playerName);
 
             var process = new Process
             {
@@ -705,6 +705,40 @@ namespace HyTaLauncher.Services
             };
 
             process.Start();
+        }
+
+        private string GetOrCreateUuid(string playerName)
+        {
+            var uuidFile = Path.Combine(_launcherDir, "players.json");
+            var players = new Dictionary<string, string>();
+            
+            // Загружаем существующие UUID
+            if (File.Exists(uuidFile))
+            {
+                try
+                {
+                    var json = File.ReadAllText(uuidFile);
+                    players = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                }
+                catch { }
+            }
+            
+            // Ищем или создаём UUID для никнейма
+            var key = playerName.ToLowerInvariant();
+            if (!players.TryGetValue(key, out var uuid))
+            {
+                uuid = Guid.NewGuid().ToString();
+                players[key] = uuid;
+                
+                // Сохраняем
+                try
+                {
+                    File.WriteAllText(uuidFile, JsonConvert.SerializeObject(players, Formatting.Indented));
+                }
+                catch { }
+            }
+            
+            return uuid;
         }
 
         private string GetJavaPath()
