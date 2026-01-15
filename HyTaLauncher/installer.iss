@@ -2,7 +2,7 @@
 ; Compile with Inno Setup 6.x
 
 #define MyAppName "HyTaLauncher"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "HyTaLauncher"
 #define MyAppURL "https://github.com/MerryJoyKey-Studio/HyTaLauncher"
 #define MyAppExeName "HyTaLauncher.exe"
@@ -28,6 +28,10 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
+AlwaysRestart=no
+CloseApplications=yes
+RestartApplications=yes
+CloseApplicationsFilter=*.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -40,9 +44,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "main"; Description: "HyTaLauncher"; Types: full compact custom; Flags: fixed
 
 [Files]
-Source: "bin\Release\net8.0-windows\win-x64\publish\HyTaLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Languages\*"; DestDir: "{app}\Languages"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "bin\Release\net8.0-windows\win-x64\publish\HyTaLauncher.exe"; DestDir: "{app}"; Flags: replacesameversion restartreplace
+Source: "Fonts\*"; DestDir: "{app}\Fonts"; Flags: replacesameversion recursesubdirs createallsubdirs 
+Source: "Languages\*"; DestDir: "{app}\Languages"; Flags: replacesameversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -58,6 +62,32 @@ Type: filesandordirs; Name: "{userappdata}\HyTaLauncher"
 [Code]
 var
   DeleteGameCheckbox: TNewCheckBox;
+
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Проверяем, запущен ли лаунчер
+  if CheckForMutexes('HyTaLauncher') then
+  begin
+    if MsgBox('HyTaLauncher is currently running. Please close it before continuing installation.' + #13#10#13#10 + 
+              'Do you want to close it now?', mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      // Пытаемся закрыть процесс
+      Exec('taskkill', '/F /IM HyTaLauncher.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      Sleep(1000); // Ждём завершения процесса
+      Result := True;
+    end
+    else
+    begin
+      Result := False;
+    end;
+  end
+  else
+  begin
+    Result := True;
+  end;
+end;
 
 procedure InitializeUninstallProgressForm();
 begin

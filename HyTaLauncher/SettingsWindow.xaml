@@ -78,7 +78,7 @@
                             Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock x:Name="InfoText"
-                                       Text="HyTaLauncher v1.0.4"
+                                       Text="HyTaLauncher v1.0.5"
                                        FontSize="11"
                                        Foreground="{StaticResource TextBrush}"/>
                             <TextBlock x:Name="InfoDescText"

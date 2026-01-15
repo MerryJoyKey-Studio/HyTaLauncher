@@ -255,7 +255,23 @@ namespace HyTaLauncher.Services
             await DownloadGameAsync(version, localization);
 
             StatusChanged?.Invoke(localization.Get("status.launching"));
-            LaunchGame(playerName, version);
+            
+            try
+            {
+                LaunchGame(playerName, version);
+            }
+            catch (Exception ex)
+            {
+                // Если ошибка запуска связана с повреждёнными файлами - предлагаем переустановку
+                if (ex.Message.Contains("параллельная конфигурация") || 
+                    ex.Message.Contains("side-by-side configuration") ||
+                    ex.Message.Contains("VCRUNTIME") ||
+                    ex.Message.Contains("MSVCP"))
+                {
+                    throw new Exception(localization.Get("error.corrupted_files"));
+                }
+                throw;
+            }
         }
 
         private async Task DownloadJreAsync(LocalizationService localization)
@@ -418,7 +434,71 @@ namespace HyTaLauncher.Services
                 }
 
                 StatusChanged?.Invoke(localization.Get("status.applying_patch"));
-                await ApplyPwrAsync(pwrPath, gameDir, localization);
+                
+                try
+                {
+                    await ApplyPwrAsync(pwrPath, gameDir, localization);
+                }
+                catch (Exception ex)
+                {
+                    // Если это инкрементальный патч и он не сработал - пробуем полную установку
+                    if (prevVer > 0)
+                    {
+                        var logPath = Path.Combine(_launcherDir, "butler.log");
+                        File.AppendAllText(logPath, $"[{DateTime.Now}] Patch {prevVer}->{targetVer} failed: {ex.Message}\n");
+                        
+                        StatusChanged?.Invoke(localization.Get("status.patch_failed_full"));
+                        
+                        // Удаляем повреждённую установку
+                        if (Directory.Exists(gameDir))
+                        {
+                            try { Directory.Delete(gameDir, true); } catch { }
+                        }
+                        
+                        // Удаляем файл версии
+                        if (File.Exists(versionFile))
+                        {
+                            try { File.Delete(versionFile); } catch { }
+                        }
+                        
+                        // Рекурсивно вызываем установку с нуля (будет использована полная версия)
+                        await DownloadGameAsync(version, localization);
+                        return;
+                    }
+                    
+                    // Если это была полная установка - пробрасываем ошибку
+                    throw;
+                }
+                
+                // Проверяем целостность после патча
+                if (!File.Exists(clientPath) || new FileInfo(clientPath).Length < 1024)
+                {
+                    // Если это инкрементальный патч - пробуем полную установку
+                    if (prevVer > 0)
+                    {
+                        StatusChanged?.Invoke(localization.Get("status.corrupted_retry_full"));
+                        
+                        // Удаляем повреждённую установку
+                        if (Directory.Exists(gameDir))
+                        {
+                            try { Directory.Delete(gameDir, true); } catch { }
+                        }
+                        
+                        if (File.Exists(versionFile))
+                        {
+                            try { File.Delete(versionFile); } catch { }
+                        }
+                        
+                        // Рекурсивно вызываем установку с нуля
+                        await DownloadGameAsync(version, localization);
+                        return;
+                    }
+                    
+                    // Если это была полная установка - ошибка
+                    if (File.Exists(versionFile))
+                        File.Delete(versionFile);
+                    throw new Exception("Game files corrupted after patch. Please try reinstalling.");
+                }
                 
                 // Обновляем версию после каждого патча
                 File.WriteAllText(versionFile, targetVer.ToString());
@@ -589,6 +669,33 @@ namespace HyTaLauncher.Services
             }
 
             var stagingDir = Path.Combine(gameDir, "staging-temp");
+            
+            // ВАЖНО: Очищаем staging директорию перед использованием
+            // Остатки от предыдущих патчей могут вызвать повреждение
+            if (Directory.Exists(stagingDir))
+            {
+                try
+                {
+                    Directory.Delete(stagingDir, true);
+                }
+                catch
+                {
+                    // Если не удалось удалить - пробуем очистить содержимое
+                    try
+                    {
+                        foreach (var file in Directory.GetFiles(stagingDir, "*", SearchOption.AllDirectories))
+                        {
+                            File.Delete(file);
+                        }
+                        foreach (var dir in Directory.GetDirectories(stagingDir))
+                        {
+                            Directory.Delete(dir, true);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            
             Directory.CreateDirectory(stagingDir);
             Directory.CreateDirectory(gameDir);
 
@@ -601,6 +708,8 @@ namespace HyTaLauncher.Services
             // Логируем команду
             var logPath = Path.Combine(_launcherDir, "butler.log");
             File.AppendAllText(logPath, $"\n[{DateTime.Now}] Running: {butlerPath} {arguments}\n");
+            File.AppendAllText(logPath, $"PWR file size: {new FileInfo(pwrPath).Length} bytes\n");
+            File.AppendAllText(logPath, $"Game dir exists: {Directory.Exists(gameDir)}\n");
 
             var process = new Process
             {
@@ -636,6 +745,15 @@ namespace HyTaLauncher.Services
             if (!completed)
             {
                 process.Kill();
+                
+                // Очищаем staging при таймауте
+                try
+                {
+                    if (Directory.Exists(stagingDir))
+                        Directory.Delete(stagingDir, true);
+                }
+                catch { }
+                
                 throw new Exception("Butler timeout (10 min)");
             }
 
@@ -646,12 +764,28 @@ namespace HyTaLauncher.Services
                     errorMsg = stdout.ToString().Trim();
                 if (string.IsNullOrEmpty(errorMsg))
                     errorMsg = "Unknown error";
+                
+                // Очищаем staging при ошибке
+                try
+                {
+                    if (Directory.Exists(stagingDir))
+                        Directory.Delete(stagingDir, true);
+                }
+                catch { }
                     
                 throw new Exception($"Butler error (code {process.ExitCode}): {errorMsg}");
             }
 
-            if (Directory.Exists(stagingDir))
-                Directory.Delete(stagingDir, true);
+            // Очищаем staging после успешного применения
+            try
+            {
+                if (Directory.Exists(stagingDir))
+                    Directory.Delete(stagingDir, true);
+            }
+            catch
+            {
+                // Не критично если не удалось удалить
+            }
             
             ProgressChanged?.Invoke(100);
             StatusChanged?.Invoke(localization.Get("status.game_installed_done"));
@@ -727,11 +861,12 @@ namespace HyTaLauncher.Services
                 catch { }
             }
             
-            // Ищем или создаём UUID для никнейма
+            // Ищем или создаём UUID для никнейма (используем lowercase для стабильности)
             var key = playerName.ToLowerInvariant();
             if (!players.TryGetValue(key, out var uuid))
             {
-                uuid = Guid.NewGuid().ToString();
+                // Генерируем UUID БЕЗ дефисов (формат для Minecraft/Hytale)
+                uuid = Guid.NewGuid().ToString("N"); // "N" = 32 символа без дефисов
                 players[key] = uuid;
                 
                 // Сохраняем
@@ -740,6 +875,22 @@ namespace HyTaLauncher.Services
                     File.WriteAllText(uuidFile, JsonConvert.SerializeObject(players, Formatting.Indented));
                 }
                 catch { }
+            }
+            else
+            {
+                // Если UUID был сохранён со старым форматом (с дефисами) - конвертируем
+                if (uuid.Contains("-"))
+                {
+                    uuid = uuid.Replace("-", "");
+                    players[key] = uuid;
+                    
+                    // Сохраняем обновлённый формат
+                    try
+                    {
+                        File.WriteAllText(uuidFile, JsonConvert.SerializeObject(players, Formatting.Indented));
+                    }
+                    catch { }
+                }
             }
             
             return uuid;
@@ -829,6 +980,64 @@ namespace HyTaLauncher.Services
         {
             var javaExe = Path.Combine(_gameDir, "release", "package", "jre", "latest", "bin", "java.exe");
             return File.Exists(javaExe) ? javaExe : "java";
+        }
+
+        /// <summary>
+        /// Переустанавливает игру: удаляет текущую установку и скачивает заново
+        /// </summary>
+        public async Task ReinstallGameAsync(GameVersion version, LocalizationService localization)
+        {
+            var gameDir = Path.Combine(_gameDir, version.Branch, "package", "game", "latest");
+            var versionFile = Path.Combine(gameDir, ".version");
+
+            StatusChanged?.Invoke(localization.Get("status.reinstalling"));
+
+            // Удаляем папку игры (кроме UserData, которая теперь отдельно)
+            if (Directory.Exists(gameDir))
+            {
+                try
+                {
+                    Directory.Delete(gameDir, true);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to delete game folder: {ex.Message}");
+                }
+            }
+
+            // Удаляем кэшированные PWR файлы для этой ветки/версии
+            var cacheDir = Path.Combine(_launcherDir, "cache");
+            if (Directory.Exists(cacheDir))
+            {
+                var pwrFiles = Directory.GetFiles(cacheDir, $"{version.Branch}_*_{version.Version}.pwr");
+                foreach (var file in pwrFiles)
+                {
+                    try { File.Delete(file); } catch { }
+                }
+            }
+
+            // Скачиваем и устанавливаем заново
+            await DownloadGameAsync(version, localization);
+        }
+
+        /// <summary>
+        /// Проверяет, установлена ли указанная версия игры
+        /// </summary>
+        public bool IsGameInstalled(GameVersion version)
+        {
+            var gameDir = Path.Combine(_gameDir, version.Branch, "package", "game", "latest");
+            var clientPath = Path.Combine(gameDir, "Client", "HytaleClient.exe");
+            var versionFile = Path.Combine(gameDir, ".version");
+
+            if (!File.Exists(clientPath) || !File.Exists(versionFile))
+                return false;
+
+            if (int.TryParse(File.ReadAllText(versionFile).Trim(), out int installedVersion))
+            {
+                return installedVersion == version.Version;
+            }
+
+            return false;
         }
     }
 

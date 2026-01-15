@@ -136,13 +136,30 @@
                         </Grid.RowDefinitions>
 
                         <!-- Logo -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <Grid Grid.Row="0" Margin="0,0,0,20" HorizontalAlignment="Center">
+                            <!-- Image Logo (загружается с сервера) -->
+                            <Image x:Name="LogoImage"
+                                   Source="https://hytale.com/static/images/logo.png"
+                                   Height="92"
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center">
+                                <Image.Effect>
+                                    <DropShadowEffect Color="#2ea043" 
+                                                      BlurRadius="20" 
+                                                      ShadowDepth="0"
+                                                      Opacity="0.4"/>
+                                </Image.Effect>
+                            </Image>
+                            
+                            <!-- Text Logo (fallback если картинка не загрузилась) -->
                             <TextBlock x:Name="LogoText"
                                        Text="HYTALE"
-                                       FontSize="32"
+                                       FontSize="60"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrush}"
-                                       HorizontalAlignment="Center">
+                                       HorizontalAlignment="Center"
+                                       Visibility="Collapsed">
                                 <TextBlock.Effect>
                                     <DropShadowEffect Color="#2ea043" 
                                                       BlurRadius="20" 
@@ -150,7 +167,7 @@
                                                       Opacity="0.4"/>
                                 </TextBlock.Effect>
                             </TextBlock>
-                        </StackPanel>
+                        </Grid>
 
                         <!-- Form -->
                         <StackPanel Grid.Row="1" VerticalAlignment="Top">
@@ -184,7 +201,8 @@
                                           ItemContainerStyle="{StaticResource ModernComboBoxItem}"
                                           DisplayMemberPath="Name"
                                           Height="36"
-                                          IsEnabled="False"/>
+                                          IsEnabled="False"
+                                          SelectionChanged="VersionComboBox_SelectionChanged"/>
                                 <Button x:Name="RefreshButton"
                                         Grid.Column="1"
                                         Content="↻"
@@ -207,7 +225,7 @@
                             <ComboBox x:Name="BranchComboBox"
                                       Style="{StaticResource ModernComboBox}"
                                       ItemContainerStyle="{StaticResource ModernComboBoxItem}"
-                                      SelectedIndex="0"
+                                      SelectedIndex="1"
                                       Height="36"
                                       SelectionChanged="BranchComboBox_SelectionChanged"
                                       Margin="0,0,0,20">
@@ -245,14 +263,34 @@
                             </StackPanel>
 
                             <!-- Play Button -->
-                            <Button x:Name="PlayButton"
-                                    Content="PLAY"
-                                    Style="{StaticResource ModernButton}"
-                                    Click="PlayButton_Click"
-                                    FontSize="14"
-                                    FontWeight="Bold"
-                                    Height="42"
-                                    Padding="0"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="PlayButton"
+                                        Grid.Column="0"
+                                        Content="PLAY"
+                                        Style="{StaticResource ModernButton}"
+                                        Click="PlayButton_Click"
+                                        FontSize="14"
+                                        FontWeight="Bold"
+                                        Height="42"
+                                        Padding="0"/>
+                                <Button x:Name="ReinstallButton"
+                                        Grid.Column="1"
+                                        Content="🔄"
+                                        Style="{StaticResource ModernButton}"
+                                        Background="{StaticResource CardBackgroundBrush}"
+                                        Click="ReinstallButton_Click"
+                                        FontSize="14"
+                                        Width="42"
+                                        Height="42"
+                                        Margin="8,0,0,0"
+                                        Padding="0"
+                                        ToolTip="Reinstall"
+                                        Visibility="Collapsed"/>
+                            </Grid>
                             
                             <!-- Start Server Button -->
                             <Button x:Name="StartServerButton"
@@ -330,29 +368,108 @@
                     Background="#08ffffff"
                     CornerRadius="0,0,12,12"
                     Padding="20,12">
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock x:Name="FooterText"
-                               Text="HyTaLauncher v1.0.4 • Unofficial launcher"
-                               FontSize="10"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,4"/>
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center">
-                        <TextBlock x:Name="DisclaimerText"
-                                   Text="This is a non-commercial fan project. After trying the game, please purchase it at"
-                                   FontSize="9"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,4,0"/>
-                        <TextBlock Text="store.hytale.com"
-                                   FontSize="9"
-                                   Foreground="{StaticResource AccentBrush}"
-                                   Cursor="Hand"
-                                   VerticalAlignment="Center"
-                                   MouseLeftButtonDown="Store_Click"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Social Links -->
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <!-- Website Button -->
+                        <Border Background="{StaticResource CardBackgroundBrush}"
+                                CornerRadius="6"
+                                Padding="10,6"
+                                Margin="0,0,10,0"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="Website_Click">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#1a2f1a"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🌐"
+                                           FontSize="14"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,6,0"/>
+                                <TextBlock x:Name="WebsiteText"
+                                           Text="Website"
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Discord Button -->
+                        <Border Background="{StaticResource CardBackgroundBrush}"
+                                CornerRadius="6"
+                                Padding="10,6"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="Discord_Click">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#1a1f3a"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="💬"
+                                           FontSize="14"
+                                           Foreground="#5865F2"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,6,0"/>
+                                <TextBlock x:Name="DiscordText"
+                                           Text="Discord"
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                </StackPanel>
+
+                    <!-- Center: Info -->
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center">
+                        <TextBlock x:Name="FooterText"
+                                   Text="HyTaLauncher v1.0.5 • Unofficial launcher"
+                                   FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center">
+                            <TextBlock x:Name="DisclaimerText"
+                                       Text="This is a non-commercial fan project. After trying the game, please purchase it at"
+                                       FontSize="9"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,4,0"/>
+                            <TextBlock Text="store.hytale.com"
+                                       FontSize="9"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       Cursor="Hand"
+                                       VerticalAlignment="Center"
+                                       MouseLeftButtonDown="Store_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Right: Placeholder for balance -->
+                    <StackPanel Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed"/>
+                </Grid>
             </Border>
         </Grid>
     </Border>

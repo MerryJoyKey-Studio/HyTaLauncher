@@ -40,7 +40,7 @@ namespace HyTaLauncher
             
             LoadSettings();
             
-            // Миграция данных из старых папок UserData в новую общую папку (v1.0.4)
+            // Миграция данных из старых папок UserData в новую общую папку (v1.0.5)
             _gameLauncher.MigrateUserData();
             InitializeLanguages();
             UpdateUI();
@@ -53,6 +53,7 @@ namespace HyTaLauncher
                 await LoadVersionsAsync();
                 await LoadNewsAsync();
                 await CheckForUpdatesAsync();
+                SetupLogoFallback();
             };
         }
 
@@ -77,8 +78,12 @@ namespace HyTaLauncher
             StatusText.Text = _localization.Get("main.preparing");
             StartServerText.Text = _localization.Get("main.start_server");
             VpnHintText.Text = _localization.Get("main.vpn_hint");
+            ReinstallButton.ToolTip = _localization.Get("main.reinstall");
+            WebsiteText.Text = _localization.Get("main.website");
+            DiscordText.Text = _localization.Get("main.discord");
             
             CheckServerAvailable();
+            UpdateReinstallButtonVisibility();
         }
 
         private void LoadSettings()
@@ -116,21 +121,28 @@ namespace HyTaLauncher
             var update = await _updateService.CheckForUpdatesAsync();
             if (update != null)
             {
-                var message = string.Format(
-                    _localization.Get("update.message"),
-                    update.Version,
-                    UpdateService.CurrentVersion
-                );
+                // Проверяем есть ли portable версия для автообновления
+                var hasPortable = !string.IsNullOrEmpty(update.PortableDownloadUrl);
+                
+                var message = hasPortable
+                    ? string.Format(_localization.Get("update.message_auto"), update.Version, UpdateService.CurrentVersion)
+                    : string.Format(_localization.Get("update.message"), update.Version, UpdateService.CurrentVersion);
 
                 var result = MessageBox.Show(
                     message,
                     _localization.Get("update.available"),
-                    MessageBoxButton.YesNo,
+                    hasPortable ? MessageBoxButton.YesNoCancel : MessageBoxButton.YesNo,
                     MessageBoxImage.Information
                 );
 
-                if (result == MessageBoxResult.Yes)
+                if (result == MessageBoxResult.Yes && hasPortable)
                 {
+                    // Автообновление
+                    await PerformAutoUpdateAsync(update);
+                }
+                else if (result == MessageBoxResult.No && hasPortable)
+                {
+                    // Открыть страницу загрузки вручную
                     try
                     {
                         Process.Start(new ProcessStartInfo
@@ -142,6 +154,60 @@ namespace HyTaLauncher
                     catch { }
                 }
             }
+        }
+
+        private async Task PerformAutoUpdateAsync(UpdateInfo update)
+        {
+            PlayButton.IsEnabled = false;
+            ProgressPanel.Visibility = Visibility.Visible;
+
+            _updateService.ProgressChanged += OnUpdateProgressChanged;
+            _updateService.StatusChanged += OnStatusChanged;
+
+            try
+            {
+                var success = await _updateService.DownloadAndApplyUpdateAsync(update, _localization);
+                if (success)
+                {
+                    // Закрываем приложение - батник перезапустит
+                    Application.Current.Shutdown();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    string.Format(_localization.Get("update.error"), ex.Message),
+                    _localization.Get("error.title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
+            finally
+            {
+                _updateService.ProgressChanged -= OnUpdateProgressChanged;
+                _updateService.StatusChanged -= OnStatusChanged;
+                PlayButton.IsEnabled = true;
+                ProgressPanel.Visibility = Visibility.Collapsed;
+                ResetProgress();
+            }
+        }
+
+        private void OnUpdateProgressChanged(double progress)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (progress < 0)
+                {
+                    DownloadProgress.IsIndeterminate = true;
+                    ProgressPercent.Text = "...";
+                }
+                else
+                {
+                    DownloadProgress.IsIndeterminate = false;
+                    DownloadProgress.Value = progress;
+                    ProgressPercent.Text = $"{progress:F1}%";
+                }
+            });
         }
 
         private async Task LoadVersionsAsync()
@@ -196,12 +262,23 @@ namespace HyTaLauncher
         private async void BranchComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (IsLoaded)
+            {
                 await LoadVersionsAsync();
+                UpdateReinstallButtonVisibility();
+            }
         }
 
         private async void RefreshVersions_Click(object sender, RoutedEventArgs e)
         {
             await LoadVersionsAsync();
+        }
+
+        private void VersionComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (IsLoaded)
+            {
+                UpdateReinstallButtonVisibility();
+            }
         }
 
         private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -253,9 +330,44 @@ namespace HyTaLauncher
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(_localization.Get("error.launch"), ex.Message), 
-                    _localization.Get("error.title"),
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                var errorMsg = string.Format(_localization.Get("error.launch"), ex.Message);
+                
+                // Если ошибка связана с повреждёнными файлами - предлагаем переустановку
+                if (ex.Message.Contains(_localization.Get("error.corrupted_files")) ||
+                    ex.Message.Contains("corrupted") ||
+                    ex.Message.Contains("повреждён"))
+                {
+                    var result = MessageBox.Show(
+                        _localization.Get("error.corrupted_reinstall"),
+                        _localization.Get("error.title"),
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Error
+                    );
+                    
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Запускаем переустановку
+                        try
+                        {
+                            await _gameLauncher.ReinstallGameAsync(selectedVersion, _localization);
+                        }
+                        catch (Exception reinstallEx)
+                        {
+                            MessageBox.Show(
+                                string.Format(_localization.Get("error.launch"), reinstallEx.Message),
+                                _localization.Get("error.title"),
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(errorMsg, 
+                        _localization.Get("error.title"),
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             finally
             {
@@ -373,6 +485,32 @@ namespace HyTaLauncher
             catch { }
         }
 
+        private void Website_Click(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://hytalauncher.ru",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        }
+
+        private void Discord_Click(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://discord.gg/Hwtew6UfQw",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        }
+
         private void CheckServerAvailable()
         {
             var serverBatPath = GetServerBatPath();
@@ -440,6 +578,85 @@ namespace HyTaLauncher
                     _localization.Get("error.title"),
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void UpdateReinstallButtonVisibility()
+        {
+            var selectedVersion = VersionComboBox.SelectedItem as GameVersion;
+            if (selectedVersion != null && _gameLauncher.IsGameInstalled(selectedVersion))
+            {
+                ReinstallButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ReinstallButton.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private async void ReinstallButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedVersion = VersionComboBox.SelectedItem as GameVersion;
+            if (selectedVersion == null)
+                return;
+
+            var result = MessageBox.Show(
+                _localization.Get("main.reinstall_confirm"),
+                _localization.Get("main.reinstall_title"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            PlayButton.IsEnabled = false;
+            ReinstallButton.IsEnabled = false;
+            ProgressPanel.Visibility = Visibility.Visible;
+
+            try
+            {
+                await _gameLauncher.ReinstallGameAsync(selectedVersion, _localization);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(_localization.Get("error.launch"), ex.Message),
+                    _localization.Get("error.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                PlayButton.IsEnabled = true;
+                ReinstallButton.IsEnabled = true;
+                ProgressPanel.Visibility = Visibility.Collapsed;
+                ResetProgress();
+                UpdateReinstallButtonVisibility();
+            }
+        }
+
+        private void SetupLogoFallback()
+        {
+            // Если картинка не загрузилась - показываем текст
+            LogoImage.ImageFailed += (s, e) =>
+            {
+                LogoImage.Visibility = Visibility.Collapsed;
+                LogoText.Visibility = Visibility.Visible;
+            };
+            
+            // Проверяем загрузку через таймер (на случай если ImageFailed не сработал)
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                if (LogoImage.Source == null || !LogoImage.Source.CanFreeze)
+                {
+                    LogoImage.Visibility = Visibility.Collapsed;
+                    LogoText.Visibility = Visibility.Visible;
+                }
+            };
+            timer.Start();
         }
     }
 }
