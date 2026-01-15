@@ -13,7 +13,8 @@ namespace HyTaLauncher
     {
         private readonly SettingsManager _settingsManager;
         private readonly LocalizationService _localization;
-        private const string RUSSIFIER_URL = "https://mjkey.ru/hytalauncher/ru.zip";
+        private string RussifierUrl => Config.RussifierUrl;
+        private string OnlineFixUrl => Config.OnlineFixUrl;
 
         public SettingsWindow(SettingsManager settingsManager, LocalizationService localization)
         {
@@ -46,6 +47,8 @@ namespace HyTaLauncher
             MirrorWarningText.Text = _localization.Get("settings.mirror_warning");
             RussifierLabel.Text = _localization.Get("settings.russifier");
             RussifierBtnText.Text = _localization.Get("settings.install_russifier");
+            OnlineFixLabel.Text = _localization.Get("settings.onlinefix");
+            OnlineFixBtnText.Text = _localization.Get("settings.install_onlinefix");
         }
 
         private void CheckGameInstalled()
@@ -54,9 +57,14 @@ namespace HyTaLauncher
             var isInstalled = IsGameInstalled(gameDir);
             
             RussifierBtn.IsEnabled = isInstalled;
+            OnlineFixBtn.IsEnabled = isInstalled;
+            
             RussifierStatusText.Text = isInstalled 
                 ? "" 
                 : _localization.Get("settings.russifier_no_game");
+            OnlineFixStatusText.Text = isInstalled 
+                ? "" 
+                : _localization.Get("settings.onlinefix_no_game");
         }
 
         private string GetGameDirectory()
@@ -180,7 +188,7 @@ namespace HyTaLauncher
                 using var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
                 
-                var response = await httpClient.GetAsync(RUSSIFIER_URL);
+                var response = await httpClient.GetAsync(RussifierUrl);
                 response.EnsureSuccessStatusCode();
                 
                 await using (var fs = new FileStream(zipPath, FileMode.Create))
@@ -260,6 +268,76 @@ namespace HyTaLauncher
             {
                 var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
                 CopyDirectory(dir, destSubDir);
+            }
+        }
+
+        private async void OnlineFixButton_Click(object sender, RoutedEventArgs e)
+        {
+            OnlineFixBtn.IsEnabled = false;
+            OnlineFixStatusText.Text = _localization.Get("settings.onlinefix_downloading");
+            OnlineFixStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
+
+            try
+            {
+                var gameDir = GetGameDirectory();
+                var installDir = Path.Combine(gameDir, "install", "release", "package", "game");
+                var cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HyTaLauncher", "cache"
+                );
+                Directory.CreateDirectory(cacheDir);
+
+                var zipPath = Path.Combine(cacheDir, "online.zip");
+                var extractPath = Path.Combine(cacheDir, "online_temp");
+
+                // Скачиваем архив
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
+                
+                var response = await httpClient.GetAsync(OnlineFixUrl);
+                response.EnsureSuccessStatusCode();
+                
+                await using (var fs = new FileStream(zipPath, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
+                }
+
+                OnlineFixStatusText.Text = _localization.Get("settings.onlinefix_installing");
+
+                // Распаковываем
+                if (Directory.Exists(extractPath))
+                    Directory.Delete(extractPath, true);
+                
+                ZipFile.ExtractToDirectory(zipPath, extractPath);
+
+                // Копируем содержимое в каждую версию игры
+                int installedCount = 0;
+                foreach (var versionDir in Directory.GetDirectories(installDir))
+                {
+                    // Копируем всё содержимое архива в папку версии
+                    CopyDirectory(extractPath, versionDir);
+                    installedCount++;
+                }
+
+                // Очистка
+                if (Directory.Exists(extractPath))
+                    Directory.Delete(extractPath, true);
+                if (File.Exists(zipPath))
+                    File.Delete(zipPath);
+
+                OnlineFixStatusText.Text = string.Format(_localization.Get("settings.onlinefix_done"), installedCount);
+                OnlineFixStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0x2e, 0xa0, 0x43));
+            }
+            catch (Exception ex)
+            {
+                OnlineFixStatusText.Text = $"{_localization.Get("settings.onlinefix_error")}: {ex.Message}";
+                OnlineFixStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0xcc, 0x33, 0x33));
+            }
+            finally
+            {
+                OnlineFixBtn.IsEnabled = true;
             }
         }
     }

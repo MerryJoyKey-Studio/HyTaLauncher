@@ -25,7 +25,7 @@ namespace HyTaLauncher.Services
         private const string RepoName = "HyTaLauncher";
         private const string ApiUrl = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
 
-        public static string CurrentVersion => "1.0.2";
+        public static string CurrentVersion => "1.0.3";
 
         public UpdateService()
         {

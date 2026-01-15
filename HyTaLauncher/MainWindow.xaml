@@ -236,6 +236,12 @@
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            HorizontalAlignment="Right"
                                            Margin="0,4,0,0"/>
+                                <TextBlock x:Name="VpnHintText"
+                                           Text="If download is slow, try using VPN"
+                                           FontSize="9"
+                                           Foreground="#ff9800"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0"/>
                             </StackPanel>
 
                             <!-- Play Button -->
@@ -247,6 +253,22 @@
                                     FontWeight="Bold"
                                     Height="42"
                                     Padding="0"/>
+                            
+                            <!-- Start Server Button -->
+                            <Button x:Name="StartServerButton"
+                                    Style="{StaticResource ModernButton}"
+                                    Background="{StaticResource CardBackgroundBrush}"
+                                    Click="StartServerButton_Click"
+                                    FontSize="11"
+                                    Height="32"
+                                    Margin="0,8,0,0"
+                                    Padding="0"
+                                    Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🖥️" Margin="0,0,6,0"/>
+                                    <TextBlock x:Name="StartServerText" Text="Start Server"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
 
                         <!-- Language & Settings -->
@@ -310,7 +332,7 @@
                     Padding="20,12">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock x:Name="FooterText"
-                               Text="HyTaLauncher v1.0.2 • Unofficial launcher"
+                               Text="HyTaLauncher v1.0.3 • Unofficial launcher"
                                FontSize="10"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                HorizontalAlignment="Center"

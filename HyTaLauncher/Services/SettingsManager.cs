@@ -12,6 +12,7 @@ namespace HyTaLauncher.Services
         public int MemoryMb { get; set; } = 4096;
         public string Language { get; set; } = ""; // Пустая строка = определить по системе
         public bool UseMirror { get; set; } = false; // Использовать зеркало для скачивания
+        public bool ServerInfoShown { get; set; } = false; // Показана ли инструкция по серверу
     }
 
     public class SettingsManager

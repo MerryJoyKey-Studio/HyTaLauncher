@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using HyTaLauncher.Helpers;
@@ -71,6 +72,10 @@ namespace HyTaLauncher
             FooterText.Text = _localization.Get("main.footer");
             DisclaimerText.Text = _localization.Get("main.disclaimer");
             StatusText.Text = _localization.Get("main.preparing");
+            StartServerText.Text = _localization.Get("main.start_server");
+            VpnHintText.Text = _localization.Get("main.vpn_hint");
+            
+            CheckServerAvailable();
         }
 
         private void LoadSettings()
@@ -80,16 +85,21 @@ namespace HyTaLauncher
             BranchComboBox.SelectedIndex = settings.VersionIndex;
             _localization.LoadLanguage(settings.Language);
             _gameLauncher.UseMirror = settings.UseMirror;
+            
+            // Устанавливаем папку игры
+            if (!string.IsNullOrEmpty(settings.GameDirectory))
+            {
+                _gameLauncher.GameDirectory = settings.GameDirectory;
+            }
         }
 
         private void SaveSettings()
         {
-            _settings.Save(new LauncherSettings
-            {
-                Nickname = NicknameTextBox.Text,
-                VersionIndex = BranchComboBox.SelectedIndex,
-                Language = _localization.CurrentLanguage
-            });
+            var settings = _settings.Load();
+            settings.Nickname = NicknameTextBox.Text;
+            settings.VersionIndex = BranchComboBox.SelectedIndex;
+            settings.Language = _localization.CurrentLanguage;
+            _settings.Save(settings);
         }
 
         private async Task LoadNewsAsync()
@@ -310,9 +320,18 @@ namespace HyTaLauncher
             settingsWindow.Owner = this;
             settingsWindow.ShowDialog();
             
-            // Обновляем настройку зеркала после закрытия окна настроек
+            // Обновляем настройки после закрытия окна настроек
             var settings = _settings.Load();
             _gameLauncher.UseMirror = settings.UseMirror;
+            
+            // Обновляем папку игры
+            if (!string.IsNullOrEmpty(settings.GameDirectory))
+            {
+                _gameLauncher.GameDirectory = settings.GameDirectory;
+            }
+            
+            // Проверяем доступность сервера (мог быть установлен онлайн фикс)
+            CheckServerAvailable();
         }
 
         private void Mods_Click(object sender, MouseButtonEventArgs e)
@@ -349,6 +368,75 @@ namespace HyTaLauncher
                 });
             }
             catch { }
+        }
+
+        private void CheckServerAvailable()
+        {
+            var serverBatPath = GetServerBatPath();
+            StartServerButton.Visibility = !string.IsNullOrEmpty(serverBatPath) 
+                ? Visibility.Visible 
+                : Visibility.Collapsed;
+        }
+
+        private string? GetServerBatPath()
+        {
+            var settings = _settings.Load();
+            var gameDir = string.IsNullOrEmpty(settings.GameDirectory)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hytale")
+                : settings.GameDirectory;
+
+            var installDir = Path.Combine(gameDir, "install", "release", "package", "game");
+            if (!Directory.Exists(installDir))
+                return null;
+
+            // Проверяем каждую версию на наличие start-server.bat
+            foreach (var versionDir in Directory.GetDirectories(installDir))
+            {
+                var serverBat = Path.Combine(versionDir, "Server", "start-server.bat");
+                if (File.Exists(serverBat))
+                    return serverBat;
+            }
+
+            return null;
+        }
+
+        private void StartServerButton_Click(object sender, RoutedEventArgs e)
+        {
+            var serverBatPath = GetServerBatPath();
+            if (string.IsNullOrEmpty(serverBatPath))
+                return;
+
+            // Показываем инструкции при первом запуске
+            var settings = _settings.Load();
+            if (!settings.ServerInfoShown)
+            {
+                MessageBox.Show(
+                    _localization.Get("main.server_info"),
+                    _localization.Get("main.server_info_title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
+                
+                settings.ServerInfoShown = true;
+                _settings.Save(settings);
+            }
+
+            try
+            {
+                var serverDir = Path.GetDirectoryName(serverBatPath);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = serverBatPath,
+                    WorkingDirectory = serverDir,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(_localization.Get("error.launch"), ex.Message),
+                    _localization.Get("error.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

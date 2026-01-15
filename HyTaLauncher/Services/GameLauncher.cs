@@ -28,7 +28,7 @@ namespace HyTaLauncher.Services
 
         private readonly HttpClient _httpClient;
         private readonly string _launcherDir;  // Папка лаунчера: %AppData%\HyTaLauncher
-        private readonly string _gameDir;      // Папка игры: %AppData%\Hytale
+        private string _gameDir;               // Папка игры: по умолчанию %AppData%\Hytale
         private const int ConsecutiveMissesToStop = 5; // Прекращаем поиск после 5 подряд отсутствующих версий
         
         // Доступные ветки
@@ -42,12 +42,26 @@ namespace HyTaLauncher.Services
         
         // URL зеркала для скачивания
         private const string OFFICIAL_BASE_URL = "https://game-patches.hytale.com/patches/windows/amd64";
-        private const string MIRROR_BASE_URL = "http://93.189.231.137/patches/windows/amd64";
+        private string MirrorBaseUrl => Config.MirrorUrl;
         
         // Использовать зеркало
         public bool UseMirror { get; set; } = false;
         
-        private string GetPatchBaseUrl() => UseMirror ? MIRROR_BASE_URL : OFFICIAL_BASE_URL;
+        // Папка игры (можно изменить из настроек)
+        public string GameDirectory
+        {
+            get => _gameDir;
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    _gameDir = Path.Combine(value, "install");
+                    EnsureDirectories();
+                }
+            }
+        }
+        
+        private string GetPatchBaseUrl() => UseMirror && !string.IsNullOrEmpty(MirrorBaseUrl) ? MirrorBaseUrl : OFFICIAL_BASE_URL;
 
         public GameLauncher()
         {

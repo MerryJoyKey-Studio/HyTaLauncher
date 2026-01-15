@@ -7,6 +7,8 @@ namespace HyTaLauncher
     {
         // API key - loaded from .env file or environment variable
         private static string? _curseForgeApiKey;
+        private static string? _mirrorUrl;
+        private static string? _russifierUrl;
         
         public static string CurseForgeApiKey
         {
@@ -14,18 +16,56 @@ namespace HyTaLauncher
             {
                 if (_curseForgeApiKey == null)
                 {
-                    _curseForgeApiKey = LoadApiKey();
+                    _curseForgeApiKey = LoadSecret("CURSEFORGE_API_KEY");
                 }
                 return _curseForgeApiKey;
             }
         }
         
-        private static string LoadApiKey()
+        public static string MirrorUrl
+        {
+            get
+            {
+                if (_mirrorUrl == null)
+                {
+                    _mirrorUrl = LoadSecret("MIRROR_URL");
+                }
+                return _mirrorUrl;
+            }
+        }
+        
+        public static string RussifierUrl
+        {
+            get
+            {
+                if (_russifierUrl == null)
+                {
+                    _russifierUrl = LoadSecret("RUSSIFIER_URL");
+                }
+                return _russifierUrl;
+            }
+        }
+        
+        private static string? _onlineFixUrl;
+        
+        public static string OnlineFixUrl
+        {
+            get
+            {
+                if (_onlineFixUrl == null)
+                {
+                    _onlineFixUrl = LoadSecret("ONLINEFIX_URL");
+                }
+                return _onlineFixUrl;
+            }
+        }
+        
+        private static string LoadSecret(string key)
         {
             // 1. Try environment variable first
-            var envKey = Environment.GetEnvironmentVariable("CURSEFORGE_API_KEY");
-            if (!string.IsNullOrEmpty(envKey))
-                return envKey;
+            var envValue = Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrEmpty(envValue))
+                return envValue;
             
             // 2. Try .env file in app directory
             var envPaths = new[]
@@ -42,23 +82,33 @@ namespace HyTaLauncher
                     foreach (var line in File.ReadAllLines(envPath))
                     {
                         var trimmed = line.Trim();
-                        if (trimmed.StartsWith("CURSEFORGE_API_KEY="))
+                        if (trimmed.StartsWith($"{key}="))
                         {
-                            return trimmed.Substring("CURSEFORGE_API_KEY=".Length).Trim();
+                            return trimmed.Substring($"{key}=".Length).Trim();
                         }
                     }
                 }
             }
             
-            // 3. Fallback - placeholder (will be replaced at build time for releases)
-            var placeholder = "#{CURSEFORGE_API_KEY}#";
-            if (!placeholder.StartsWith("#"))
-                return placeholder;
-            
-            return "";
+            // 3. Fallback - hardcoded placeholders (will be replaced at build time for releases)
+            // These strings are replaced by build.ps1 or GitHub Actions
+            return key switch
+            {
+                "CURSEFORGE_API_KEY" => "#{CURSEFORGE_API_KEY}#",
+                "MIRROR_URL" => "#{MIRROR_URL}#",
+                "RUSSIFIER_URL" => "#{RUSSIFIER_URL}#",
+                "ONLINEFIX_URL" => "#{ONLINEFIX_URL}#",
+                _ => ""
+            };
         }
     }
 }
+
+
+
+
+
+
 
 
 

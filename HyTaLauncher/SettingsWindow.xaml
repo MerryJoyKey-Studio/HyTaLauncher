@@ -78,7 +78,7 @@
                             Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock x:Name="InfoText"
-                                       Text="HyTaLauncher v1.0.2"
+                                       Text="HyTaLauncher v1.0.3"
                                        FontSize="11"
                                        Foreground="{StaticResource TextBrush}"/>
                             <TextBlock x:Name="InfoDescText"
@@ -134,6 +134,31 @@
                         </StackPanel>
                     </Button>
                     <TextBlock x:Name="RussifierStatusText"
+                               Text=""
+                               FontSize="9"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,6,0,15"/>
+
+                    <!-- Online Fix -->
+                    <TextBlock x:Name="OnlineFixLabel"
+                               Text="ONLINE FIX"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <Button x:Name="OnlineFixBtn"
+                            Style="{StaticResource ModernButton}"
+                            Background="{StaticResource CardBackgroundBrush}"
+                            Padding="12,8"
+                            FontSize="11"
+                            HorizontalAlignment="Left"
+                            Click="OnlineFixButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🌐" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="OnlineFixBtnText" Text="Install Online Fix"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock x:Name="OnlineFixStatusText"
                                Text=""
                                FontSize="9"
                                Foreground="{StaticResource TextSecondaryBrush}"
