@@ -166,24 +166,16 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="
-      https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=Date&theme=dark
-    "
-  />
-  <source
-    media="(prefers-color-scheme: light)"
-    srcset="
-      https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=Date
-    "
-  />
-  <img
-    alt="Star History Chart"
-    src="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=Date"
-  />
-</picture>
+## Star History
+
+<a href="https://www.star-history.com/#MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left" />
+ </picture>
+</a>
+
 
 
 
