@@ -166,6 +166,9 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+![Star History Chart](https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=Date)
+
+
 
 
 
