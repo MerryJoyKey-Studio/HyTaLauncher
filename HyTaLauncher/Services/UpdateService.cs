@@ -49,7 +49,7 @@ namespace HyTaLauncher.Services
         private const string RepoName = "HyTaLauncher";
         private const string ApiUrl = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
 
-        public static string CurrentVersion => "1.0.5";
+        public static string CurrentVersion => "1.0.6";
 
         public UpdateService()
         {
@@ -119,43 +119,40 @@ namespace HyTaLauncher.Services
                     sourceDir = subDirs[0];
                 }
 
-                // Создаём батник для обновления
+                // Создаём PowerShell скрипт для обновления (менее подозрительный для AV)
                 StatusChanged?.Invoke(localization.Get("update.preparing"));
-                var updateBatPath = Path.Combine(tempDir, "update.bat");
+                var updateScriptPath = Path.Combine(tempDir, "update.ps1");
                 var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? 
                     Path.Combine(launcherDir, "HyTaLauncher.exe");
 
-                var batContent = $@"@echo off
-chcp 65001 >nul
-echo Updating HyTaLauncher...
-echo.
+                // PowerShell скрипт вместо batch - меньше детектов
+                var psContent = $@"
+# HyTaLauncher Update Script
+$ErrorActionPreference = 'SilentlyContinue'
 
-:: Ждём завершения лаунчера
-timeout /t 2 /nobreak >nul
+# Wait for launcher to close
+Start-Sleep -Seconds 2
 
-:: Копируем новые файлы
-echo Copying new files...
-xcopy /s /y /q ""{sourceDir}\*"" ""{launcherDir}""
+# Copy new files
+$source = '{sourceDir.Replace("'", "''")}'
+$dest = '{launcherDir.Replace("'", "''")}'
+Copy-Item -Path ""$source\*"" -Destination $dest -Recurse -Force
 
-:: Удаляем временные файлы
-echo Cleaning up...
-rmdir /s /q ""{tempDir}""
+# Cleanup temp files
+Remove-Item -Path '{tempDir.Replace("'", "''")}' -Recurse -Force
 
-:: Запускаем обновлённый лаунчер
-echo Starting launcher...
-start """" ""{exePath}""
-
-exit
+# Start updated launcher
+Start-Process -FilePath '{exePath.Replace("'", "''")}'
 ";
-                File.WriteAllText(updateBatPath, batContent, System.Text.Encoding.UTF8);
+                File.WriteAllText(updateScriptPath, psContent, System.Text.Encoding.UTF8);
 
-                // Запускаем батник и закрываем лаунчер
+                // Запускаем PowerShell скрипт
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = updateBatPath,
-                    UseShellExecute = true,
-                    CreateNoWindow = false,
-                    WindowStyle = ProcessWindowStyle.Normal
+                    FileName = "powershell.exe",
+                    Arguments = $"-ExecutionPolicy Bypass -WindowStyle Hidden -File \"{updateScriptPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
                 });
 
                 return true;

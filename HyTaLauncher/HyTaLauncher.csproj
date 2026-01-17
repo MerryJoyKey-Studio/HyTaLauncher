@@ -9,6 +9,32 @@
     <AssemblyName>HyTaLauncher</AssemblyName>
     <RootNamespace>HyTaLauncher</RootNamespace>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    
+    <!-- Version info -->
+    <Version>1.0.6</Version>
+    <AssemblyVersion>1.0.6.0</AssemblyVersion>
+    <FileVersion>1.0.6.0</FileVersion>
+    
+    <!-- Company info - helps reduce AV false positives -->
+    <Company>MerryJoyKey Studio</Company>
+    <Product>HyTaLauncher</Product>
+    <Copyright>Copyright © 2026 MerryJoyKey Studio. MIT License.</Copyright>
+    <Description>Unofficial launcher for Hytale game. Open source project.</Description>
+    <Authors>MerryJoyKey Studio</Authors>
+    
+    <!-- Additional metadata -->
+    <PackageProjectUrl>https://github.com/MerryJoyKey-Studio/HyTaLauncher</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MerryJoyKey-Studio/HyTaLauncher</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    
+    <!-- Optimization settings that may help with AV -->
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    
+    <!-- Disable trimming which can cause AV issues -->
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +44,8 @@
   <ItemGroup>
     <Resource Include="Fonts\cinzel_regular.ttf" />
     <Resource Include="Fonts\cinzel_bold.ttf" />
+    <Resource Include="Fonts\inter_regular.ttf" />
+    <Resource Include="Fonts\inter_bold.ttf" />
     <Resource Include="Resources\icon.ico" />
     <Resource Include="Languages\en.json" />
     <Resource Include="Languages\ru.json" />

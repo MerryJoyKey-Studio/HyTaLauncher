@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Mods"
-        Height="650" Width="950"
+        Height="650" Width="990"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -50,7 +50,7 @@
             <!-- Main Content -->
             <Grid Grid.Row="1" Margin="15,10">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="360"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -62,24 +62,157 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Header -->
+                        <!-- Modpack Panel -->
                         <Border Grid.Row="0" 
                                 Background="#10ffffff" 
                                 CornerRadius="10,10,0,0"
+                                Padding="10,8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Modpack Label and Selector -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock x:Name="ModpackLabel"
+                                               Grid.Column="0"
+                                               Text="MODPACK"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0"/>
+                                    
+                                    <ComboBox x:Name="ModpackSelector"
+                                              Grid.Column="1"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Height="26"
+                                              Padding="8,4"
+                                              FontSize="10"
+                                              SelectionChanged="ModpackSelector_SelectionChanged">
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ModernComboBoxItem}">
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="FontSize" Value="10"/>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                </Grid>
+                                
+                                <!-- Modpack Action Buttons -->
+                                <StackPanel Grid.Row="1" 
+                                            Orientation="Horizontal" 
+                                            Margin="0,6,0,0"
+                                            HorizontalAlignment="Left">
+                                    <Button x:Name="CreateModpackBtn"
+                                            Content="+"
+                                            Width="26" Height="24"
+                                            Style="{StaticResource ModernButton}"
+                                            Padding="0"
+                                            FontSize="14"
+                                            FontWeight="Bold"
+                                            ToolTip="Create Modpack"
+                                            Click="CreateModpack_Click"/>
+                                    <Button x:Name="EditModpackBtn"
+                                            Content="✏"
+                                            Width="26" Height="24"
+                                            Margin="4,0,0,0"
+                                            Style="{StaticResource ModernButton}"
+                                            Background="#3d444d"
+                                            Padding="0"
+                                            FontSize="10"
+                                            ToolTip="Edit Modpack"
+                                            IsEnabled="False"
+                                            Click="EditModpack_Click"/>
+                                    <Button x:Name="DeleteModpackBtn"
+                                            Content="🗑"
+                                            Width="26" Height="24"
+                                            Margin="4,0,0,0"
+                                            Style="{StaticResource ModernButton}"
+                                            Background="#cc3333"
+                                            Padding="0"
+                                            FontSize="10"
+                                            ToolTip="Delete Modpack"
+                                            IsEnabled="False"
+                                            Click="DeleteModpack_Click"/>
+                                    <Border Width="1" Height="16" Background="#3d444d" Margin="8,0"/>
+                                    <Button x:Name="ExportModpackBtn"
+                                            Content="📤"
+                                            Width="26" Height="24"
+                                            Style="{StaticResource ModernButton}"
+                                            Background="#3d444d"
+                                            Padding="0"
+                                            FontSize="10"
+                                            ToolTip="Export Modpack"
+                                            IsEnabled="False"
+                                            Click="ExportModpack_Click"/>
+                                    <Button x:Name="ImportModpackBtn"
+                                            Content="📥"
+                                            Width="26" Height="24"
+                                            Margin="4,0,0,0"
+                                            Style="{StaticResource ModernButton}"
+                                            Background="#3d444d"
+                                            Padding="0"
+                                            FontSize="10"
+                                            ToolTip="Import Modpack"
+                                            Click="ImportModpack_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Header -->
+                        <Border Grid.Row="1" 
+                                Background="#08ffffff" 
                                 Padding="12,10">
                             <Grid>
-                                <TextBlock x:Name="InstalledTitle"
-                                           Text="INSTALLED"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <CheckBox x:Name="SelectAllCheckBox"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,8,0"
+                                              Visibility="Collapsed"
+                                              Checked="SelectAllCheckBox_Changed"
+                                              Unchecked="SelectAllCheckBox_Changed"/>
+                                    <TextBlock x:Name="InstalledTitle"
+                                               Text="INSTALLED"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button x:Name="DeleteSelectedBtn"
+                                            Content="🗑"
+                                            Width="26" Height="26"
+                                            Style="{StaticResource ModernButton}"
+                                            Background="#cc3333"
+                                            Padding="0"
+                                            FontSize="10"
+                                            ToolTip="Delete Selected"
+                                            Visibility="Collapsed"
+                                            Click="DeleteSelected_Click"/>
+                                    <Button x:Name="SelectModeBtn"
+                                            Content="☑"
+                                            Width="26" Height="26"
+                                            Margin="6,0,0,0"
+                                            Style="{StaticResource ModernButton}"
+                                            Padding="0"
+                                            FontSize="12"
+                                            ToolTip="Select Mode"
+                                            Click="SelectMode_Click"/>
                                     <Button Content="⬆"
                                             Width="26" Height="26"
+                                            Margin="6,0,0,0"
                                             Style="{StaticResource ModernButton}"
                                             Padding="0"
                                             FontSize="12"
@@ -103,8 +236,63 @@
                             </Grid>
                         </Border>
 
+                        <!-- Tag Filter Panel -->
+                        <Border x:Name="TagFilterPanel" 
+                                Grid.Row="2"
+                                Background="#08ffffff" 
+                                Padding="8,6"
+                                Visibility="Collapsed">
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                                          VerticalScrollBarVisibility="Disabled"
+                                          Height="28">
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- All Tags Button -->
+                                    <Border x:Name="AllTagsChip"
+                                            Background="{StaticResource AccentBrush}"
+                                            CornerRadius="4"
+                                            Padding="10,4"
+                                            Margin="0,0,4,0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="AllTagsChip_Click">
+                                        <TextBlock x:Name="AllTagsText"
+                                                   Text="All"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Dynamic Tag Chips -->
+                                    <ItemsControl x:Name="TagFilterList">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding Color}"
+                                                        CornerRadius="4"
+                                                        Padding="10,4"
+                                                        Margin="4,0,0,0"
+                                                        Cursor="Hand"
+                                                        Tag="{Binding}"
+                                                        MouseLeftButtonDown="TagChip_Click">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="10"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
                         <!-- Mods List -->
-                        <ScrollViewer Grid.Row="1" 
+                        <ScrollViewer Grid.Row="3" 
                                       VerticalScrollBarVisibility="Auto"
                                       Padding="8">
                             <ItemsControl x:Name="InstalledModsList">
@@ -114,15 +302,76 @@
                                                 CornerRadius="8"
                                                 Padding="10"
                                                 Margin="0,0,0,6"
-                                                Cursor="Hand">
+                                                Cursor="Hand"
+                                                Tag="{Binding}"
+                                                MouseRightButtonDown="InstalledMod_RightClick">
+                                            <Border.ContextMenu>
+                                                <ContextMenu Style="{StaticResource ModernContextMenu}"
+                                                             Opened="ModContextMenu_Opened">
+                                                    <!-- Add Tag submenu - populated dynamically -->
+                                                    <MenuItem x:Name="AddTagMenuItem"
+                                                              Header="Add Tag"
+                                                              Style="{StaticResource ModernMenuItem}"
+                                                              Tag="{Binding}">
+                                                        <MenuItem.Icon>
+                                                            <TextBlock Text="🏷" FontSize="12"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    
+                                                    <!-- Remove Tag submenu - populated dynamically -->
+                                                    <MenuItem x:Name="RemoveTagMenuItem"
+                                                              Header="Remove Tag"
+                                                              Style="{StaticResource ModernMenuItem}"
+                                                              Tag="{Binding}">
+                                                        <MenuItem.Icon>
+                                                            <TextBlock Text="✕" FontSize="10"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    
+                                                    <Separator Background="{StaticResource BorderBrush}" Margin="4,4"/>
+                                                    
+                                                    <!-- Create New Tag -->
+                                                    <MenuItem Header="Create New Tag..."
+                                                              Style="{StaticResource ModernMenuItem}"
+                                                              Tag="{Binding}"
+                                                              Click="CreateNewTag_Click">
+                                                        <MenuItem.Icon>
+                                                            <TextBlock Text="+" FontSize="14" FontWeight="Bold"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <!-- Checkbox for selection -->
+                                                <CheckBox Grid.Column="0"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,8,0"
+                                                          Visibility="Collapsed"
+                                                          Tag="{Binding}"
+                                                          Checked="ModCheckBox_Changed"
+                                                          Unchecked="ModCheckBox_Changed"/>
+                                                
+                                                <!-- Icon -->
+                                                <Border Grid.Column="1"
+                                                        Width="36" Height="36"
+                                                        CornerRadius="6"
+                                                        Background="#1a1a1a"
+                                                        Margin="0,0,10,0"
+                                                        ClipToBounds="True">
+                                                    <Image Stretch="UniformToFill"
+                                                           Tag="{Binding IconUrl}"
+                                                           Loaded="ModIcon_Loaded"/>
+                                                </Border>
+                                                
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding DisplayName}"
                                                                FontSize="12"
                                                                FontWeight="SemiBold"
@@ -138,7 +387,7 @@
                                                     </TextBlock>
                                                 </StackPanel>
                                                 
-                                                <Button Grid.Column="1"
+                                                <Button Grid.Column="3"
                                                         Content="⬆"
                                                         Width="24" Height="24"
                                                         Style="{StaticResource ModernButton}"
@@ -151,7 +400,7 @@
                                                         Tag="{Binding}"
                                                         Click="UpdateMod_Click"/>
                                                 
-                                                <Button Grid.Column="2"
+                                                <Button Grid.Column="4"
                                                         Content="✕"
                                                         Width="24" Height="24"
                                                         Style="{StaticResource ModernButton}"
@@ -182,45 +431,120 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Header with Search -->
+                        <!-- Header with Search, Filters and Sort -->
                         <Border Grid.Row="0" 
                                 Background="#10ffffff" 
                                 CornerRadius="10,10,0,0"
                                 Padding="12,10">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 
-                                <TextBlock x:Name="BrowseTitle"
-                                           Grid.Column="0"
-                                           Text="CURSEFORGE"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{StaticResource AccentBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,15,0"/>
-                                
-                                <Grid Grid.Column="1">
+                                <!-- Row 1: Title and Search -->
+                                <Grid Grid.Row="0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="SearchBox"
-                                             Style="{StaticResource ModernTextBox}"
-                                             Height="30"
-                                             FontSize="11"
-                                             KeyDown="SearchBox_KeyDown"/>
-                                    <Button Grid.Column="1"
-                                            Content="🔍"
-                                            Width="30" Height="30"
+                                    
+                                    <TextBlock x:Name="BrowseTitle"
+                                               Grid.Column="0"
+                                               Text="CURSEFORGE"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource AccentBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,15,0"/>
+                                    
+                                    <Grid Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="SearchBox"
+                                                 Style="{StaticResource ModernTextBox}"
+                                                 Height="30"
+                                                 FontSize="11"
+                                                 KeyDown="SearchBox_KeyDown"/>
+                                        <Button Grid.Column="1"
+                                                Content="🔍"
+                                                Width="30" Height="30"
+                                                Margin="6,0,0,0"
+                                                Style="{StaticResource ModernButton}"
+                                                Padding="0"
+                                                FontSize="11"
+                                                Click="Search_Click"/>
+                                    </Grid>
+                                </Grid>
+                                
+                                <!-- Row 2: Filters and Sort -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+                                    <!-- Category Filter -->
+                                    <ComboBox x:Name="CategoryFilter"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Width="110"
+                                              Height="28"
+                                              Padding="8,4"
+                                              FontSize="10"
+                                              SelectionChanged="CategoryFilter_SelectionChanged">
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ModernComboBoxItem}">
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="FontSize" Value="10"/>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                    
+                                    <!-- Game Version Filter -->
+                                    <ComboBox x:Name="GameVersionFilter"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Width="100"
+                                              Height="28"
+                                              Padding="8,4"
+                                              FontSize="10"
+                                              Margin="6,0,0,0"
+                                              SelectionChanged="GameVersionFilter_SelectionChanged">
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ModernComboBoxItem}">
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="FontSize" Value="10"/>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                    
+                                    <!-- Clear Filters Button -->
+                                    <Button x:Name="ClearFiltersBtn"
+                                            Content="✕"
+                                            Width="28" Height="28"
                                             Margin="6,0,0,0"
                                             Style="{StaticResource ModernButton}"
+                                            Background="#3d444d"
                                             Padding="0"
-                                            FontSize="11"
-                                            Click="Search_Click"/>
-                                </Grid>
+                                            FontSize="10"
+                                            ToolTip="Clear Filters"
+                                            Click="ClearFilters_Click"/>
+                                    
+                                    <!-- Separator -->
+                                    <Border Width="1" Height="20" Background="#3d444d" Margin="10,0"/>
+                                    
+                                    <!-- Sort Dropdown -->
+                                    <ComboBox x:Name="SortDropdown"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Width="120"
+                                              Height="28"
+                                              Padding="8,4"
+                                              FontSize="10"
+                                              SelectionChanged="SortDropdown_SelectionChanged">
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ModernComboBoxItem}">
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="FontSize" Value="10"/>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                </StackPanel>
                             </Grid>
                         </Border>
 
@@ -260,7 +584,8 @@
                                                             Width="44" Height="44"
                                                             CornerRadius="8"
                                                             Background="#1a1a1a"
-                                                            Margin="0,0,10,0">
+                                                            Margin="0,0,10,0"
+                                                            ClipToBounds="True">
                                                         <Image x:Name="ModIcon"
                                                                Stretch="UniformToFill"
                                                                Tag="{Binding ThumbnailUrl}"

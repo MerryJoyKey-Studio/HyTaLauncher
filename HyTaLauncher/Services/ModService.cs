@@ -82,6 +82,18 @@ namespace HyTaLauncher.Services
                 }
                 catch { }
 
+                // Read icon URL from .icons folder if exists
+                var iconsFolder = Path.Combine(_modsFolder, ".icons");
+                var iconFilePath = Path.Combine(iconsFolder, Path.GetFileName(file) + ".icon");
+                if (File.Exists(iconFilePath))
+                {
+                    try
+                    {
+                        mod.IconUrl = await File.ReadAllTextAsync(iconFilePath);
+                    }
+                    catch { }
+                }
+
                 mods.Add(mod);
             }
 
@@ -113,14 +125,18 @@ namespace HyTaLauncher.Services
             });
         }
 
-        public async Task<List<CurseForgeSearchResult>> SearchModsAsync(string query, int page = 0, int pageSize = 20)
+        public async Task<List<CurseForgeSearchResult>> SearchModsAsync(
+            string query, 
+            SearchFilters? filters = null,
+            SortOption sort = SortOption.Popularity,
+            SortOrder sortOrder = SortOrder.Descending,
+            int page = 0, 
+            int pageSize = 20)
         {
-            LogService.LogMods($"Searching mods: query=\"{query}\", page={page}");
+            LogService.LogMods($"Searching mods: query=\"{query}\", page={page}, sort={sort}, sortOrder={sortOrder}");
             try
             {
-                var url = $"{CF_API_BASE}/mods/search?gameId={HYTALE_GAME_ID}&classId={MODS_CLASS_ID}" +
-                          $"&searchFilter={Uri.EscapeDataString(query)}&index={page * pageSize}&pageSize={pageSize}" +
-                          "&sortField=2&sortOrder=desc"; // Sort by popularity
+                var url = BuildSearchUrl(query, filters, sort, sortOrder, page, pageSize);
 
                 LogService.LogMods($"Request URL: {url}");
                 var response = await _httpClient.GetStringAsync(url);
@@ -141,13 +157,86 @@ namespace HyTaLauncher.Services
             }
         }
 
-        public async Task<List<CurseForgeSearchResult>> GetPopularModsAsync(int page = 0, int pageSize = 20)
+        /// <summary>
+        /// Builds the CurseForge API search URL with filters and sort parameters
+        /// </summary>
+        internal string BuildSearchUrl(
+            string query,
+            SearchFilters? filters,
+            SortOption sort,
+            SortOrder sortOrder,
+            int page,
+            int pageSize)
         {
-            LogService.LogMods($"Loading popular mods, page={page}");
+            var url = $"{CF_API_BASE}/mods/search?gameId={HYTALE_GAME_ID}&classId={MODS_CLASS_ID}";
+            
+            // Add search query if provided
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                url += $"&searchFilter={Uri.EscapeDataString(query)}";
+            }
+            
+            // Add pagination
+            url += $"&index={page * pageSize}&pageSize={pageSize}";
+            
+            // Add sort parameters
+            url += $"&sortField={(int)sort}";
+            url += $"&sortOrder={GetSortOrderString(sortOrder)}";
+            
+            // Add filters if provided
+            if (filters != null)
+            {
+                if (filters.CategoryId.HasValue)
+                {
+                    url += $"&categoryId={filters.CategoryId.Value}";
+                }
+                
+                if (!string.IsNullOrWhiteSpace(filters.GameVersion))
+                {
+                    url += $"&gameVersion={Uri.EscapeDataString(filters.GameVersion)}";
+                }
+                
+                if (filters.ReleaseType.HasValue)
+                {
+                    // CurseForge uses modLoaderType for some filtering, but for release type
+                    // we need to filter client-side or use the appropriate parameter
+                    // The API doesn't have a direct releaseType filter, so we'll handle this
+                    // by filtering results after fetching
+                }
+            }
+            
+            return url;
+        }
+
+        /// <summary>
+        /// Converts SortOrder enum to CurseForge API string
+        /// </summary>
+        private static string GetSortOrderString(SortOrder sortOrder)
+        {
+            return sortOrder == SortOrder.Ascending ? "asc" : "desc";
+        }
+
+        /// <summary>
+        /// Filters search results by release type (client-side filtering)
+        /// </summary>
+        public List<CurseForgeSearchResult> FilterByReleaseType(List<CurseForgeSearchResult> results, int releaseType)
+        {
+            return results.Where(r => 
+                r.LatestFiles?.Any(f => f.ReleaseType == releaseType) == true
+            ).ToList();
+        }
+
+        public async Task<List<CurseForgeSearchResult>> GetPopularModsAsync(
+            SearchFilters? filters = null,
+            SortOption sort = SortOption.Popularity,
+            SortOrder sortOrder = SortOrder.Descending,
+            int page = 0, 
+            int pageSize = 20)
+        {
+            LogService.LogMods($"Loading popular mods, page={page}, sort={sort}");
             try
             {
-                var url = $"{CF_API_BASE}/mods/search?gameId={HYTALE_GAME_ID}&classId={MODS_CLASS_ID}" +
-                          $"&index={page * pageSize}&pageSize={pageSize}&sortField=2&sortOrder=desc";
+                var url = BuildSearchUrl("", filters, sort, sortOrder, page, pageSize);
 
                 LogService.LogMods($"Request URL: {url}");
                 var response = await _httpClient.GetStringAsync(url);
@@ -155,6 +244,12 @@ namespace HyTaLauncher.Services
                 
                 var json = JObject.Parse(response);
                 var data = json["data"]?.ToObject<List<CurseForgeSearchResult>>();
+                
+                // Apply client-side release type filter if specified
+                if (filters?.ReleaseType.HasValue == true && data != null)
+                {
+                    data = FilterByReleaseType(data, filters.ReleaseType.Value);
+                }
                 
                 LogService.LogMods($"Popular mods: {data?.Count ?? 0} found");
                 return data ?? new List<CurseForgeSearchResult>();
@@ -167,7 +262,75 @@ namespace HyTaLauncher.Services
             }
         }
 
-        public async Task<bool> InstallModAsync(CurseForgeSearchResult mod)
+        /// <summary>
+        /// Gets available mod categories from CurseForge API
+        /// </summary>
+        public async Task<List<ModCategory>> GetCategoriesAsync()
+        {
+            LogService.LogMods("Loading mod categories from API");
+            try
+            {
+                var url = $"{CF_API_BASE}/categories?gameId={HYTALE_GAME_ID}&classId={MODS_CLASS_ID}";
+                LogService.LogModsVerbose($"Categories URL: {url}");
+                
+                var response = await _httpClient.GetStringAsync(url);
+                var json = JObject.Parse(response);
+                var data = json["data"]?.ToObject<List<ModCategory>>();
+                
+                LogService.LogMods($"Categories loaded: {data?.Count ?? 0}");
+                return data ?? new List<ModCategory>();
+            }
+            catch (Exception ex)
+            {
+                LogService.LogMods($"GetCategories error: {ex.Message}");
+                LogService.LogError($"ModService.GetCategoriesAsync: {ex}");
+                return new List<ModCategory>();
+            }
+        }
+
+        /// <summary>
+        /// Gets available game versions from CurseForge API
+        /// </summary>
+        public async Task<List<string>> GetGameVersionsAsync()
+        {
+            LogService.LogMods("Loading game versions from API");
+            try
+            {
+                var url = $"{CF_API_BASE}/games/{HYTALE_GAME_ID}/versions";
+                LogService.LogModsVerbose($"Versions URL: {url}");
+                
+                var response = await _httpClient.GetStringAsync(url);
+                var json = JObject.Parse(response);
+                var data = json["data"] as JArray;
+                
+                var versions = new List<string>();
+                if (data != null)
+                {
+                    foreach (var item in data)
+                    {
+                        var versionArray = item["versions"] as JArray;
+                        if (versionArray != null)
+                        {
+                            foreach (var v in versionArray)
+                            {
+                                versions.Add(v.ToString());
+                            }
+                        }
+                    }
+                }
+                
+                LogService.LogMods($"Game versions loaded: {versions.Count}");
+                return versions;
+            }
+            catch (Exception ex)
+            {
+                LogService.LogMods($"GetGameVersions error: {ex.Message}");
+                LogService.LogError($"ModService.GetGameVersionsAsync: {ex}");
+                return new List<string>();
+            }
+        }
+
+        public async Task<bool> InstallModAsync(CurseForgeSearchResult mod, string? targetFolder = null)
         {
             LogService.LogMods($"Installing mod: {mod.Name} (ID: {mod.Id})");
             try
@@ -180,10 +343,11 @@ namespace HyTaLauncher.Services
                     return false;
                 }
 
-                Directory.CreateDirectory(_modsFolder);
+                var installFolder = targetFolder ?? _modsFolder;
+                Directory.CreateDirectory(installFolder);
                 
                 var fileName = latestFile.FileName;
-                var filePath = Path.Combine(_modsFolder, fileName);
+                var filePath = Path.Combine(installFolder, fileName);
 
                 // Check if already installed
                 if (File.Exists(filePath))
@@ -220,6 +384,16 @@ namespace HyTaLauncher.Services
                         var progress = (double)downloadedBytes / totalBytes * 100;
                         ProgressChanged?.Invoke(progress);
                     }
+                }
+
+                // Save icon URL to .icons folder
+                if (!string.IsNullOrEmpty(mod.ThumbnailUrl))
+                {
+                    var iconsFolder = Path.Combine(installFolder, ".icons");
+                    Directory.CreateDirectory(iconsFolder);
+                    var iconFilePath = Path.Combine(iconsFolder, Path.GetFileName(filePath) + ".icon");
+                    await File.WriteAllTextAsync(iconFilePath, mod.ThumbnailUrl);
+                    LogService.LogModsVerbose($"Saved icon URL to: {iconFilePath}");
                 }
 
                 ProgressChanged?.Invoke(100);
@@ -305,6 +479,19 @@ namespace HyTaLauncher.Services
                 {
                     File.Delete(mod.FilePath);
                     LogService.LogMods($"Deleted mod: {mod.FilePath}");
+                    
+                    // Delete icon file from .icons folder
+                    var modsFolder = Path.GetDirectoryName(mod.FilePath);
+                    if (!string.IsNullOrEmpty(modsFolder))
+                    {
+                        var iconFilePath = Path.Combine(modsFolder, ".icons", mod.FileName + ".icon");
+                        if (File.Exists(iconFilePath))
+                        {
+                            File.Delete(iconFilePath);
+                            LogService.LogModsVerbose($"Deleted icon: {iconFilePath}");
+                        }
+                    }
+                    
                     return true;
                 }
                 return false;
@@ -349,6 +536,7 @@ namespace HyTaLauncher.Services
             {
                 mod.HasUpdate = false;
                 mod.UpdateInfo = null;
+                mod.IconUrl = null;
                 
                 if (mod.Manifest == null || string.IsNullOrEmpty(mod.Manifest.Name))
                     continue;
@@ -356,30 +544,36 @@ namespace HyTaLauncher.Services
                 try
                 {
                     // Поиск мода на CurseForge по имени
-                    var searchResults = await SearchModsAsync(mod.Manifest.Name, 0, 5);
+                    var searchResults = await SearchModsAsync(mod.Manifest.Name, null, SortOption.Popularity, SortOrder.Descending, 0, 5);
                     
                     // Ищем точное совпадение по имени
                     var match = searchResults.FirstOrDefault(r => 
                         r.Name.Equals(mod.Manifest.Name, StringComparison.OrdinalIgnoreCase) ||
                         r.Slug.Equals(mod.Manifest.Name, StringComparison.OrdinalIgnoreCase));
                     
-                    if (match?.LatestFiles?.Any() == true)
+                    if (match != null)
                     {
-                        var latestFile = match.LatestFiles.FirstOrDefault();
-                        if (latestFile != null)
+                        // Set icon URL from CurseForge
+                        mod.IconUrl = match.ThumbnailUrl;
+                        
+                        if (match.LatestFiles?.Any() == true)
                         {
-                            // Сравниваем версии
-                            var latestVersion = ExtractVersionFromFileName(latestFile.FileName);
-                            var currentVersion = mod.Manifest.Version;
-                            
-                            if (!string.IsNullOrEmpty(latestVersion) && 
-                                !string.IsNullOrEmpty(currentVersion) &&
-                                CompareVersions(latestVersion, currentVersion) > 0)
+                            var latestFile = match.LatestFiles.FirstOrDefault();
+                            if (latestFile != null)
                             {
-                                mod.HasUpdate = true;
-                                mod.UpdateInfo = match;
-                                mod.LatestVersion = latestVersion;
-                                LogService.LogMods($"Update available for {mod.DisplayName}: {currentVersion} -> {latestVersion}");
+                                // Сравниваем версии
+                                var latestVersion = ExtractVersionFromFileName(latestFile.FileName);
+                                var currentVersion = mod.Manifest.Version;
+                                
+                                if (!string.IsNullOrEmpty(latestVersion) && 
+                                    !string.IsNullOrEmpty(currentVersion) &&
+                                    CompareVersions(latestVersion, currentVersion) > 0)
+                                {
+                                    mod.HasUpdate = true;
+                                    mod.UpdateInfo = match;
+                                    mod.LatestVersion = latestVersion;
+                                    LogService.LogMods($"Update available for {mod.DisplayName}: {currentVersion} -> {latestVersion}");
+                                }
                             }
                         }
                     }

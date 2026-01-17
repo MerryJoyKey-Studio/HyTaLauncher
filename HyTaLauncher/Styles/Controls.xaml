@@ -190,7 +190,7 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="0,12,0,0">
+                            CornerRadius="0,0,0,0">
                         <ContentPresenter HorizontalAlignment="Center" 
                                           VerticalAlignment="Center"/>
                     </Border>
@@ -247,4 +247,113 @@
         </Setter>
     </Style>
 
+    <!-- Modern ScrollBar Thumb -->
+    <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="#3d444d" CornerRadius="3" Margin="2"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Modern Vertical ScrollBar -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid>
+                        <Border Background="#15ffffff" CornerRadius="4"/>
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="8"/>
+                <Setter Property="Width" Value="Auto"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Modern Context Menu -->
+    <Style x:Key="ModernContextMenu" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Modern Menu Item -->
+    <Style x:Key="ModernMenuItem" TargetType="MenuItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Grid.Column="0"
+                                              Content="{TemplateBinding Icon}"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"/>
+                            <ContentPresenter Grid.Column="1"
+                                              ContentSource="Header"
+                                              VerticalAlignment="Center"/>
+                            <Path Grid.Column="2"
+                                  x:Name="SubMenuArrow"
+                                  Data="M0,0 L4,4 L0,8"
+                                  Stroke="{StaticResource TextSecondaryBrush}"
+                                  StrokeThickness="1.5"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Margin="8,0,0,0"
+                                  Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="#1c2128"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="True">
+                            <Setter TargetName="SubMenuArrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>
+

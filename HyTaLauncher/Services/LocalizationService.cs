@@ -108,11 +108,11 @@ namespace HyTaLauncher.Services
                 catch { }
             }
 
-            // Добавляем недостающие ключи
+            // Добавляем недостающие ключи и обновляем существующие
             bool updated = false;
             foreach (var kvp in defaults)
             {
-                if (!existing.ContainsKey(kvp.Key))
+                if (!existing.ContainsKey(kvp.Key) || existing[kvp.Key] != kvp.Value)
                 {
                     existing[kvp.Key] = kvp.Value;
                     updated = true;
@@ -139,7 +139,7 @@ namespace HyTaLauncher.Services
                 ["main.settings"] = "⚙ Settings",
                 ["main.mods"] = "Mods",
                 ["main.preparing"] = "Preparing...",
-                ["main.footer"] = "HyTaLauncher v1.0.5 • Unofficial launcher",
+                ["main.footer"] = "HyTaLauncher v1.0.6 • Unofficial launcher",
                 ["main.disclaimer"] = "This is a non-commercial fan project. After trying the game, please purchase it at",
                 ["main.versions_found"] = "Versions found: {0}",
                 ["main.latest"] = "Latest (latest)",
@@ -187,7 +187,7 @@ namespace HyTaLauncher.Services
                 ["settings.game_folder"] = "GAME FOLDER",
                 ["settings.api_key"] = "CURSEFORGE API KEY",
                 ["settings.api_key_hint"] = "Get your API key at console.curseforge.com",
-                ["settings.info"] = "HyTaLauncher v1.0.5",
+                ["settings.info"] = "HyTaLauncher v1.0.6",
                 ["settings.info_desc"] = "Unofficial launcher for Hytale",
                 ["settings.cancel"] = "Cancel",
                 ["settings.save"] = "Save",
@@ -231,6 +231,8 @@ namespace HyTaLauncher.Services
                 ["update.downloading"] = "Downloading update...",
                 ["update.extracting"] = "Extracting update...",
                 ["update.preparing"] = "Preparing to restart...",
+                ["update.restarting"] = "The launcher will restart automatically.\n\nPlease wait...\n\nIf nothing happens within 10 seconds, download the update manually from GitHub.",
+                ["update.restarting_title"] = "Updating...",
                 ["update.error"] = "Update error: {0}",
                 
                 ["mods.title"] = "Mods Manager",
@@ -244,6 +246,8 @@ namespace HyTaLauncher.Services
                 ["mods.delete_confirm"] = "Delete mod \"{0}\"?",
                 ["mods.delete_title"] = "Delete mod",
                 ["mods.deleted"] = "Mod \"{0}\" deleted",
+                ["mods.delete_selected_confirm"] = "Delete {0} selected mods?",
+                ["mods.deleted_count"] = "{0} mods deleted",
                 ["mods.no_api_key"] = "CurseForge API key not set. Add it in Settings.",
                 ["mods.search_placeholder"] = "Search mods...",
                 ["mods.checking_updates"] = "Checking for updates...",
@@ -251,7 +255,98 @@ namespace HyTaLauncher.Services
                 ["mods.no_updates"] = "All mods are up to date",
                 ["mods.updating"] = "Updating {0}...",
                 ["mods.updated"] = "{0} updated!",
-                ["mods.update_failed"] = "Update failed"
+                ["mods.update_failed"] = "Update failed",
+                
+                // Filter labels
+                ["mods.filter.all_categories"] = "All Categories",
+                ["mods.filter.all_versions"] = "All Versions",
+                ["mods.filter.all_types"] = "All Types",
+                ["mods.filter.release"] = "Release",
+                ["mods.filter.beta"] = "Beta",
+                ["mods.filter.alpha"] = "Alpha",
+                
+                // Sort option labels
+                ["mods.sort.popularity"] = "Popularity",
+                ["mods.sort.downloads"] = "Downloads",
+                ["mods.sort.updated"] = "Updated",
+                ["mods.sort.name_az"] = "Name A-Z",
+                ["mods.sort.name_za"] = "Name Z-A",
+                
+                // Tag management strings
+                ["mods.tags.all"] = "All",
+                ["mods.tags.add"] = "Add Tag",
+                ["mods.tags.remove"] = "Remove Tag",
+                ["mods.tags.create"] = "Create New Tag",
+                ["mods.tags.create_title"] = "Create Tag",
+                ["mods.tags.name_placeholder"] = "Tag name",
+                ["mods.tags.delete_confirm"] = "Delete tag \"{0}\"? It will be removed from all mods.",
+                ["mods.tags.delete_title"] = "Delete Tag",
+                
+                // Modpack management strings
+                ["modpack.label"] = "MODPACK",
+                ["modpack.default"] = "Default (No Modpack)",
+                ["modpack.create.title"] = "Create Modpack",
+                ["modpack.create.name_label"] = "Modpack Name",
+                ["modpack.create.select_mods"] = "Select Mods to Include",
+                ["modpack.create.selected_count"] = "{0} mods selected",
+                ["modpack.create.button"] = "Create",
+                ["modpack.create.error_empty_name"] = "Please enter a modpack name",
+                ["modpack.create.error_invalid_name"] = "Invalid name. Cannot contain: \\ / : * ? \" < > |",
+                ["modpack.created"] = "Modpack \"{0}\" created!",
+                ["modpack.edit.title"] = "Edit Modpack",
+                ["modpack.edit.current_mods"] = "Mods in Modpack",
+                ["modpack.edit.add_mods"] = "Add Mods from Default",
+                ["modpack.edit.save"] = "Save",
+                ["modpack.renamed"] = "Modpack renamed to \"{0}\"",
+                ["modpack.delete_confirm"] = "Delete modpack \"{0}\"?\n\nThis will permanently delete all mods in this modpack.",
+                ["modpack.delete_title"] = "Delete Modpack",
+                ["modpack.deleted"] = "Modpack \"{0}\" deleted",
+                ["modpack.export_title"] = "Export Modpack",
+                ["modpack.exporting"] = "Exporting modpack...",
+                ["modpack.exported"] = "Modpack \"{0}\" exported!",
+                ["modpack.import_title"] = "Import Modpack",
+                ["modpack.importing"] = "Importing modpack...",
+                ["modpack.imported"] = "Modpack \"{0}\" imported!",
+                ["modpack.import_failed"] = "Failed to import modpack. Invalid or corrupted file.",
+                
+                // Main window modpack strings
+                ["main.modpack"] = "MODPACK",
+                ["main.modpack_default"] = "Default",
+                ["main.manage_modpacks"] = "Manage Modpacks",
+                
+                // Tag status messages
+                ["mods.tags.created"] = "Tag \"{0}\" created",
+                ["mods.tags.added_to_mod"] = "Tag added to {0}",
+                ["mods.tags.removed_from_mod"] = "Tag removed from {0}",
+                
+                ["settings.logging"] = "LOGGING",
+                ["settings.verbose_logging"] = "Enable verbose logging",
+                ["settings.logging_hint"] = "Detailed logs help diagnose issues. Logs are saved to %AppData%\\HyTaLauncher\\logs",
+                ["settings.open_logs"] = "Open logs folder",
+                ["settings.download"] = "DOWNLOAD",
+                ["settings.always_full_download"] = "Always download full version",
+                ["settings.download_hint"] = "Recommended. Disabling may cause corrupted files when updating.",
+                ["settings.font"] = "FONT",
+                ["settings.font_hint"] = "Requires restart to apply",
+                ["settings.advanced"] = "ADVANCED",
+                ["settings.advanced_btn"] = "Professional Mode",
+                ["settings.advanced_hint"] = "Custom launch arguments, open folders",
+                
+                ["advanced.title"] = "🔧 Advanced Settings",
+                ["advanced.game_args"] = "GAME LAUNCH ARGUMENTS",
+                ["advanced.game_args_hint"] = "Variables: {app-dir}, {java-exec}, {user-dir}, {uuid}, {name}",
+                ["advanced.server_args"] = "SERVER LAUNCH ARGUMENTS",
+                ["advanced.server_args_hint"] = "Modifies start-server.bat content",
+                ["advanced.reset_default"] = "↩ Reset to default",
+                ["advanced.save_to_file"] = "💾 Save to file",
+                ["advanced.folders"] = "OPEN FOLDERS",
+                ["advanced.folder_game"] = "Game",
+                ["advanced.folder_server"] = "Server",
+                ["advanced.folder_userdata"] = "UserData",
+                ["advanced.folder_mods"] = "Mods",
+                ["advanced.server_not_found"] = "Server not installed for this branch",
+                ["advanced.server_saved"] = "Server configuration saved!",
+                ["advanced.folder_not_exists"] = "Folder does not exist"
             };
         }
 
@@ -268,7 +363,7 @@ namespace HyTaLauncher.Services
                 ["main.settings"] = "⚙ Настройки",
                 ["main.mods"] = "Моды",
                 ["main.preparing"] = "Подготовка...",
-                ["main.footer"] = "HyTaLauncher v1.0.5 • Неофициальный лаунчер",
+                ["main.footer"] = "HyTaLauncher v1.0.6 • Неофициальный лаунчер",
                 ["main.disclaimer"] = "Это некоммерческий фан-проект. После ознакомления приобретите игру на",
                 ["main.versions_found"] = "Найдено версий: {0}",
                 ["main.latest"] = "Последняя (latest)",
@@ -316,7 +411,7 @@ namespace HyTaLauncher.Services
                 ["settings.game_folder"] = "ПАПКА ИГРЫ",
                 ["settings.api_key"] = "CURSEFORGE API КЛЮЧ",
                 ["settings.api_key_hint"] = "Получите API ключ на console.curseforge.com",
-                ["settings.info"] = "HyTaLauncher v1.0.5",
+                ["settings.info"] = "HyTaLauncher v1.0.6",
                 ["settings.info_desc"] = "Неофициальный лаунчер для Hytale",
                 ["settings.cancel"] = "Отмена",
                 ["settings.save"] = "Сохранить",
@@ -327,7 +422,7 @@ namespace HyTaLauncher.Services
                 ["settings.use_mirror"] = "Использовать зеркало (если официальный не работает)",
                 ["settings.mirror_warning"] = "Используйте только если официальный сервер не работает! Скорость ограничена ~2 МБ/с",
                 ["settings.mirror_confirm"] = "Внимание!\n\nИспользуйте зеркало ТОЛЬКО если не можете скачать с официальных серверов.\n\nОграничения зеркала:\n- Скорость ограничена ~2 МБ/с\n- Может не иметь последних версий\n\nСначала попробуйте официальный сервер!",
-                ["settings.russifier"] = "РУСИФИКАТОР",
+                ["settings.russifier"] = "РУСИФИКАТОР от d1ret",
                 ["settings.install_russifier"] = "Установить русификатор",
                 ["settings.russifier_no_game"] = "Игра не установлена",
                 ["settings.russifier_downloading"] = "Скачивание...",
@@ -360,6 +455,8 @@ namespace HyTaLauncher.Services
                 ["update.downloading"] = "Скачивание обновления...",
                 ["update.extracting"] = "Распаковка обновления...",
                 ["update.preparing"] = "Подготовка к перезапуску...",
+                ["update.restarting"] = "Лаунчер автоматически перезапустится.\n\nПожалуйста, подождите...\n\nЕсли ничего не произойдёт в течение 10 секунд, скачайте обновление вручную с GitHub.",
+                ["update.restarting_title"] = "Обновление...",
                 ["update.error"] = "Ошибка обновления: {0}",
                 
                 ["mods.title"] = "Менеджер модов",
@@ -373,6 +470,8 @@ namespace HyTaLauncher.Services
                 ["mods.delete_confirm"] = "Удалить мод \"{0}\"?",
                 ["mods.delete_title"] = "Удаление мода",
                 ["mods.deleted"] = "Мод \"{0}\" удалён",
+                ["mods.delete_selected_confirm"] = "Удалить выбранные моды ({0})?",
+                ["mods.deleted_count"] = "Удалено модов: {0}",
                 ["mods.no_api_key"] = "API ключ CurseForge не указан. Добавьте его в Настройках.",
                 ["mods.search_placeholder"] = "Поиск модов...",
                 ["mods.checking_updates"] = "Проверка обновлений...",
@@ -380,7 +479,98 @@ namespace HyTaLauncher.Services
                 ["mods.no_updates"] = "Все моды актуальны",
                 ["mods.updating"] = "Обновление {0}...",
                 ["mods.updated"] = "{0} обновлён!",
-                ["mods.update_failed"] = "Ошибка обновления"
+                ["mods.update_failed"] = "Ошибка обновления",
+                
+                // Filter labels
+                ["mods.filter.all_categories"] = "Все категории",
+                ["mods.filter.all_versions"] = "Все версии",
+                ["mods.filter.all_types"] = "Все типы",
+                ["mods.filter.release"] = "Релиз",
+                ["mods.filter.beta"] = "Бета",
+                ["mods.filter.alpha"] = "Альфа",
+                
+                // Sort option labels
+                ["mods.sort.popularity"] = "Популярность",
+                ["mods.sort.downloads"] = "Загрузки",
+                ["mods.sort.updated"] = "Обновлено",
+                ["mods.sort.name_az"] = "Имя А-Я",
+                ["mods.sort.name_za"] = "Имя Я-А",
+                
+                // Tag management strings
+                ["mods.tags.all"] = "Все",
+                ["mods.tags.add"] = "Добавить тег",
+                ["mods.tags.remove"] = "Удалить тег",
+                ["mods.tags.create"] = "Создать новый тег",
+                ["mods.tags.create_title"] = "Создать тег",
+                ["mods.tags.name_placeholder"] = "Название тега",
+                ["mods.tags.delete_confirm"] = "Удалить тег \"{0}\"? Он будет удалён со всех модов.",
+                ["mods.tags.delete_title"] = "Удалить тег",
+                
+                // Modpack management strings
+                ["modpack.label"] = "МОДПАК",
+                ["modpack.default"] = "По умолчанию (без модпака)",
+                ["modpack.create.title"] = "Создать модпак",
+                ["modpack.create.name_label"] = "Название модпака",
+                ["modpack.create.select_mods"] = "Выберите моды для включения",
+                ["modpack.create.selected_count"] = "Выбрано модов: {0}",
+                ["modpack.create.button"] = "Создать",
+                ["modpack.create.error_empty_name"] = "Введите название модпака",
+                ["modpack.create.error_invalid_name"] = "Недопустимое имя. Нельзя использовать: \\ / : * ? \" < > |",
+                ["modpack.created"] = "Модпак \"{0}\" создан!",
+                ["modpack.edit.title"] = "Редактировать модпак",
+                ["modpack.edit.current_mods"] = "Моды в модпаке",
+                ["modpack.edit.add_mods"] = "Добавить моды из основной папки",
+                ["modpack.edit.save"] = "Сохранить",
+                ["modpack.renamed"] = "Модпак переименован в \"{0}\"",
+                ["modpack.delete_confirm"] = "Удалить модпак \"{0}\"?\n\nЭто безвозвратно удалит все моды в этом модпаке.",
+                ["modpack.delete_title"] = "Удалить модпак",
+                ["modpack.deleted"] = "Модпак \"{0}\" удалён",
+                ["modpack.export_title"] = "Экспорт модпака",
+                ["modpack.exporting"] = "Экспорт модпака...",
+                ["modpack.exported"] = "Модпак \"{0}\" экспортирован!",
+                ["modpack.import_title"] = "Импорт модпака",
+                ["modpack.importing"] = "Импорт модпака...",
+                ["modpack.imported"] = "Модпак \"{0}\" импортирован!",
+                ["modpack.import_failed"] = "Не удалось импортировать модпак. Файл повреждён или недействителен.",
+                
+                // Main window modpack strings
+                ["main.modpack"] = "МОДПАК",
+                ["main.modpack_default"] = "По умолчанию",
+                ["main.manage_modpacks"] = "Управление модпаками",
+                
+                // Tag status messages
+                ["mods.tags.created"] = "Тег \"{0}\" создан",
+                ["mods.tags.added_to_mod"] = "Тег добавлен к {0}",
+                ["mods.tags.removed_from_mod"] = "Тег удалён с {0}",
+                
+                ["settings.logging"] = "ЛОГИРОВАНИЕ",
+                ["settings.verbose_logging"] = "Включить подробные логи",
+                ["settings.logging_hint"] = "Подробные логи помогают диагностировать проблемы. Логи сохраняются в %AppData%\\HyTaLauncher\\logs",
+                ["settings.open_logs"] = "Открыть папку логов",
+                ["settings.download"] = "ЗАГРУЗКА",
+                ["settings.always_full_download"] = "Всегда скачивать полную версию",
+                ["settings.download_hint"] = "Рекомендуется. Отключение может привести к повреждению файлов при обновлении.",
+                ["settings.font"] = "ШРИФТ",
+                ["settings.font_hint"] = "Требуется перезапуск для применения",
+                ["settings.advanced"] = "ДОПОЛНИТЕЛЬНО",
+                ["settings.advanced_btn"] = "Режим профессионала",
+                ["settings.advanced_hint"] = "Кастомные параметры запуска, открытие папок",
+                
+                ["advanced.title"] = "🔧 Расширенные настройки",
+                ["advanced.game_args"] = "ПАРАМЕТРЫ ЗАПУСКА ИГРЫ",
+                ["advanced.game_args_hint"] = "Переменные: {app-dir}, {java-exec}, {user-dir}, {uuid}, {name}",
+                ["advanced.server_args"] = "ПАРАМЕТРЫ ЗАПУСКА СЕРВЕРА",
+                ["advanced.server_args_hint"] = "Изменяет содержимое start-server.bat",
+                ["advanced.reset_default"] = "↩ Сбросить",
+                ["advanced.save_to_file"] = "💾 Сохранить в файл",
+                ["advanced.folders"] = "ОТКРЫТЬ ПАПКИ",
+                ["advanced.folder_game"] = "Игра",
+                ["advanced.folder_server"] = "Сервер",
+                ["advanced.folder_userdata"] = "UserData",
+                ["advanced.folder_mods"] = "Моды",
+                ["advanced.server_not_found"] = "Сервер не установлен для этой ветки",
+                ["advanced.server_saved"] = "Конфигурация сервера сохранена!",
+                ["advanced.folder_not_exists"] = "Папка не существует"
             };
         }
     }

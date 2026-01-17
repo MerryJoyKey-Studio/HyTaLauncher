@@ -1,5 +1,60 @@
 namespace HyTaLauncher.Services
 {
+    /// <summary>
+    /// Search filters for CurseForge mod search
+    /// </summary>
+    public class SearchFilters
+    {
+        /// <summary>
+        /// Category ID to filter by (null = all categories)
+        /// </summary>
+        public int? CategoryId { get; set; }
+
+        /// <summary>
+        /// Game version to filter by (null = all versions)
+        /// </summary>
+        public string? GameVersion { get; set; }
+
+        /// <summary>
+        /// Release type filter: 1=Release, 2=Beta, 3=Alpha (null = all types)
+        /// </summary>
+        public int? ReleaseType { get; set; }
+    }
+
+    /// <summary>
+    /// Sort options for CurseForge mod search, values map to CurseForge API sortField
+    /// </summary>
+    public enum SortOption
+    {
+        /// <summary>Featured/Popularity (sortField=1)</summary>
+        Featured = 1,
+        /// <summary>Popularity (sortField=2)</summary>
+        Popularity = 2,
+        /// <summary>Last Updated (sortField=3)</summary>
+        LastUpdated = 3,
+        /// <summary>Name (sortField=4)</summary>
+        Name = 4,
+        /// <summary>Author (sortField=5)</summary>
+        Author = 5,
+        /// <summary>Total Downloads (sortField=6)</summary>
+        TotalDownloads = 6,
+        /// <summary>Category (sortField=7)</summary>
+        Category = 7,
+        /// <summary>Game Version (sortField=8)</summary>
+        GameVersion = 8
+    }
+
+    /// <summary>
+    /// Sort order direction
+    /// </summary>
+    public enum SortOrder
+    {
+        /// <summary>Ascending order</summary>
+        Ascending,
+        /// <summary>Descending order</summary>
+        Descending
+    }
+
     public class ModManifest
     {
         public string Group { get; set; } = "";
@@ -32,6 +87,9 @@ namespace HyTaLauncher.Services
         public bool HasUpdate { get; set; }
         public CurseForgeSearchResult? UpdateInfo { get; set; }
         public string? LatestVersion { get; set; }
+        
+        // Icon URL from CurseForge (if matched)
+        public string? IconUrl { get; set; }
         
         public string DisplayName => Manifest?.Name ?? FileName;
         public string DisplayVersion => Manifest?.Version ?? "?";
@@ -83,5 +141,17 @@ namespace HyTaLauncher.Services
         public long FileLength { get; set; }
         public List<string> GameVersions { get; set; } = new();
         public int ReleaseType { get; set; } // 1 = Release, 2 = Beta, 3 = Alpha
+    }
+
+    /// <summary>
+    /// CurseForge mod category
+    /// </summary>
+    public class ModCategory
+    {
+        public int Id { get; set; }
+        public int GameId { get; set; }
+        public string Name { get; set; } = "";
+        public string Slug { get; set; } = "";
+        public string? IconUrl { get; set; }
     }
 }
