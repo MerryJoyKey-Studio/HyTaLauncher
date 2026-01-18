@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="README-EN.md">🇬🇧 English</a>
+  <a href="README-EN.md">English</a>
 </p>
 
 ---
@@ -208,3 +208,4 @@ HyTaLauncher включает интеграцию с CurseForge для упра
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left" />
  </picture>
 </a>
+
