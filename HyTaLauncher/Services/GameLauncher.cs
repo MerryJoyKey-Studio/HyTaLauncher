@@ -5,6 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading;
+using HyTaLauncher.Helpers;
 using Newtonsoft.Json;
 
 namespace HyTaLauncher.Services
@@ -16,7 +18,7 @@ namespace HyTaLauncher.Services
     {
         public enum Platform { Windows, Linux, MacOS }
         public enum Architecture { Amd64, Arm64, X86 }
-        
+
         public static Platform CurrentPlatform
         {
             get
@@ -30,7 +32,7 @@ namespace HyTaLauncher.Services
                 return Platform.Windows; // Default fallback
             }
         }
-        
+
         public static Architecture CurrentArchitecture
         {
             get
@@ -44,7 +46,7 @@ namespace HyTaLauncher.Services
                 };
             }
         }
-        
+
         public static string GetPlatformString()
         {
             return CurrentPlatform switch
@@ -54,7 +56,7 @@ namespace HyTaLauncher.Services
                 _ => "windows"
             };
         }
-        
+
         public static string GetArchitectureString()
         {
             return CurrentArchitecture switch
@@ -64,17 +66,17 @@ namespace HyTaLauncher.Services
                 _ => "amd64"
             };
         }
-        
+
         public static string GetExecutableExtension()
         {
             return CurrentPlatform == Platform.Windows ? ".exe" : "";
         }
-        
+
         public static string GetJavaExecutable()
         {
             return CurrentPlatform == Platform.Windows ? "java.exe" : "java";
         }
-        
+
         public static string GetGameExecutable()
         {
             return CurrentPlatform switch
@@ -84,7 +86,7 @@ namespace HyTaLauncher.Services
                 _ => "HytaleClient.exe"
             };
         }
-        
+
         public static bool IsOnlinefixSupported()
         {
             // Online fix only works on Windows
@@ -101,46 +103,68 @@ namespace HyTaLauncher.Services
         public int Version { get; set; } = 0;      // Целевая версия
         public bool IsLatest { get; set; } = false;
         public bool IsFullInstall => PrevVersion == 0; // 0/X.pwr = полная версия
-        
+
         public override string ToString() => Name;
     }
 
-    public class GameLauncher
+    public class GameLauncher : IDisposable
     {
         public event Action<double>? ProgressChanged;
         public event Action<string>? StatusChanged;
 
-        private readonly HttpClient _httpClient;
+        private HttpRetryService _httpService = null!;
+        private HttpRetryService _quickHttpService = null!;
         private readonly string _launcherDir;  // Папка лаунчера: %AppData%\HyTaLauncher
         private string _gameDir;               // Папка игры: по умолчанию %AppData%\Hytale
         private const int ConsecutiveMissesToStop = 5; // Прекращаем поиск после 5 подряд отсутствующих версий
-        
+        private bool _disposed;
+
+        /// <summary>
+        /// CancellationTokenSource for cancelling long-running operations
+        /// </summary>
+        private CancellationTokenSource? _currentOperationCts = null;
+
         // Доступные ветки
         public static readonly string[] AvailableBranches = { "release", "pre-release", "beta", "alpha" };
-        
+
         // Кэш всех найденных PWR файлов: branch -> (prevVer, targetVer) -> exists
         private Dictionary<string, HashSet<(int prev, int target)>> _pwrCache = new();
-        
-        // Отдельный клиент для быстрых проверок
-        private readonly HttpClient _quickClient;
-        
+
         // URL для скачивания (зависит от платформы)
-        private string GetOfficialBaseUrl() => 
+        private string GetOfficialBaseUrl() =>
             $"https://game-patches.hytale.com/patches/{PlatformHelper.GetPlatformString()}/{PlatformHelper.GetArchitectureString()}";
         private string MirrorBaseUrl => Config.MirrorUrl;
-        
+
         // Использовать зеркало
         public bool UseMirror { get; set; } = false;
-        
+
         // Всегда скачивать полную версию (без инкрементальных патчей)
         public bool AlwaysFullDownload { get; set; } = true;
-        
+
         // Кастомные аргументы запуска игры
         public string CustomGameArgs { get; set; } = "";
-        
+
         // Selected modpack ID for game launch (null = use default UserData)
         public string? SelectedModpackId { get; set; }
-        
+
+        // Run game as administrator
+        public bool RunGameAsAdmin { get; set; } = false;
+
+        // Bypass SSL certificate validation (for corporate proxies/antivirus)
+        public bool BypassSslValidation
+        {
+            get => _bypassSslValidation;
+            set
+            {
+                if (_bypassSslValidation != value)
+                {
+                    _bypassSslValidation = value;
+                    ReinitializeHttpServices();
+                }
+            }
+        }
+        private bool _bypassSslValidation = false;
+
         // Папка игры (можно изменить из настроек)
         public string GameDirectory
         {
@@ -154,37 +178,74 @@ namespace HyTaLauncher.Services
                 }
             }
         }
-        
+
         private string GetPatchBaseUrl() => UseMirror && !string.IsNullOrEmpty(MirrorBaseUrl) ? MirrorBaseUrl : GetOfficialBaseUrl();
 
         public GameLauncher()
         {
-            // Включаем поддержку TLS 1.2 и 1.3 для старых систем
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-            
-            var handler = new HttpClientHandler
-            {
-                // Разрешаем автоматическую декомпрессию
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            };
-            
-            _httpClient = new HttpClient(handler);
-            _httpClient.Timeout = TimeSpan.FromMinutes(30); // Увеличиваем таймаут для больших файлов
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "HytaleLauncher/1.0");
-            
-            // Быстрый клиент для HEAD запросов
-            _quickClient = new HttpClient(new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            });
-            _quickClient.Timeout = TimeSpan.FromSeconds(5);
-            _quickClient.DefaultRequestHeaders.Add("User-Agent", "HytaleLauncher/1.0");
-            
             var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             _launcherDir = Path.Combine(roaming, "HyTaLauncher");
             _gameDir = Path.Combine(roaming, "Hytale", "install");
-            
+
+            // Create HTTP services with retry support
+            InitializeHttpServices();
+
             EnsureDirectories();
+        }
+
+        /// <summary>
+        /// Initializes HTTP services with current SSL settings
+        /// </summary>
+        private void InitializeHttpServices()
+        {
+            var largeFileConfig = new RetryConfig
+            {
+                MaxRetries = 5,
+                Timeout = TimeSpan.FromMinutes(60),
+                EnableResume = true,
+                InitialRetryDelay = TimeSpan.FromSeconds(2),
+                BypassSslValidation = _bypassSslValidation
+            };
+
+            var quickConfig = new RetryConfig
+            {
+                MaxRetries = 2,
+                Timeout = TimeSpan.FromSeconds(10),
+                EnableResume = false,
+                BypassSslValidation = _bypassSslValidation
+            };
+
+            _httpService = new HttpRetryService(largeFileConfig);
+            _quickHttpService = new HttpRetryService(quickConfig);
+
+            // Wire up events
+            _httpService.ProgressChanged += p => ProgressChanged?.Invoke(p);
+            _httpService.StatusChanged += s => StatusChanged?.Invoke(s);
+
+            LogService.LogNetworkVerbose($"HTTP services initialized with SSL bypass: {_bypassSslValidation}");
+        }
+
+        /// <summary>
+        /// Reinitializes HTTP services when SSL settings change
+        /// </summary>
+        private void ReinitializeHttpServices()
+        {
+            LogService.LogGame($"Reinitializing HTTP services with SSL bypass: {_bypassSslValidation}");
+
+            // Dispose old services
+            _httpService?.Dispose();
+            _quickHttpService?.Dispose();
+
+            // Create new services with updated settings
+            InitializeHttpServices();
+        }
+
+        /// <summary>
+        /// Cancels the current long-running operation
+        /// </summary>
+        public void CancelCurrentOperation()
+        {
+            _currentOperationCts?.Cancel();
         }
 
         /// <summary>
@@ -194,24 +255,23 @@ namespace HyTaLauncher.Services
         {
             var versions = new List<GameVersion>();
             var pwrSet = new HashSet<(int prev, int target)>();
-            
+
             StatusChanged?.Invoke(localization.Get("status.checking_versions"));
 
             int maxVersion = 0;
             int consecutiveMisses = 0;
             int ver = 1;
-            
+
             // Ищем полные версии (0/X.pwr) пока не будет 5 подряд отсутствующих
             while (consecutiveMisses < ConsecutiveMissesToStop)
             {
                 var url = $"{GetPatchBaseUrl()}/{branch}/0/{ver}.pwr";
-                
+
                 try
                 {
-                    using var request = new HttpRequestMessage(HttpMethod.Head, url);
-                    using var response = await _quickClient.SendAsync(request);
-                    
-                    if (response.IsSuccessStatusCode)
+                    var (exists, _) = await _quickHttpService.HeadAsync(url);
+
+                    if (exists)
                     {
                         maxVersion = ver;
                         pwrSet.Add((0, ver));
@@ -226,7 +286,7 @@ namespace HyTaLauncher.Services
                 {
                     consecutiveMisses++;
                 }
-                
+
                 ProgressChanged?.Invoke(Math.Min(ver * 5, 50));
                 ver++;
             }
@@ -236,17 +296,16 @@ namespace HyTaLauncher.Services
             {
                 consecutiveMisses = 0;
                 int targetVer = prevVer + 1;
-                
+
                 while (consecutiveMisses < ConsecutiveMissesToStop && targetVer <= maxVersion + ConsecutiveMissesToStop)
                 {
                     var url = $"{GetPatchBaseUrl()}/{branch}/{prevVer}/{targetVer}.pwr";
-                    
+
                     try
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Head, url);
-                        using var response = await _quickClient.SendAsync(request);
-                        
-                        if (response.IsSuccessStatusCode)
+                        var (exists, _) = await _quickHttpService.HeadAsync(url);
+
+                        if (exists)
                         {
                             pwrSet.Add((prevVer, targetVer));
                             consecutiveMisses = 0;
@@ -260,10 +319,10 @@ namespace HyTaLauncher.Services
                     {
                         consecutiveMisses++;
                     }
-                    
+
                     targetVer++;
                 }
-                
+
                 var progress = 50 + (double)prevVer / Math.Max(maxVersion, 1) * 50;
                 ProgressChanged?.Invoke(Math.Min(progress, 100));
             }
@@ -272,10 +331,10 @@ namespace HyTaLauncher.Services
             _pwrCache[branch] = pwrSet;
 
             ProgressChanged?.Invoke(100);
-            
+
             // Создаём список версий для UI (только целевые версии)
             var targetVersions = pwrSet.Select(p => p.target).Distinct().OrderBy(v => v).ToList();
-            
+
             foreach (var v in targetVersions)
             {
                 versions.Add(new GameVersion
@@ -287,7 +346,7 @@ namespace HyTaLauncher.Services
                     Version = v
                 });
             }
-            
+
             if (versions.Count == 0)
             {
                 versions.Add(new GameVersion
@@ -316,10 +375,10 @@ namespace HyTaLauncher.Services
 
             return versions;
         }
-        
+
         // Хранит все найденные версии для определения базы
         private List<GameVersion> _allVersions = new();
-        
+
         /// <summary>
         /// Сохраняет версии для использования при установке
         /// </summary>
@@ -334,7 +393,7 @@ namespace HyTaLauncher.Services
             Directory.CreateDirectory(_launcherDir);
             Directory.CreateDirectory(Path.Combine(_launcherDir, "cache"));
             Directory.CreateDirectory(Path.Combine(_launcherDir, "butler"));
-            
+
             // Папки игры для всех веток: %AppData%\Hytale\install\{branch}\package\...
             foreach (var branch in AvailableBranches)
             {
@@ -347,19 +406,25 @@ namespace HyTaLauncher.Services
         {
             LogService.LogGame($"Starting launch: player={playerName}, version={version.Version}, branch={version.Branch}");
             LogService.LogGameVerbose($"Version details: PwrFile={version.PwrFile}, PrevVersion={version.PrevVersion}, IsLatest={version.IsLatest}");
-            
+
+            // Create cancellation token for this operation
+            _currentOperationCts?.Cancel();
+            _currentOperationCts?.Dispose();
+            _currentOperationCts = new CancellationTokenSource();
+            var cancellationToken = _currentOperationCts.Token;
+
             StatusChanged?.Invoke(localization.Get("status.checking_java"));
-            await DownloadJreAsync(version.Branch, localization);
+            await DownloadJreAsync(version.Branch, localization, cancellationToken);
 
             StatusChanged?.Invoke(localization.Get("status.checking_game"));
-            await DownloadGameAsync(version, localization);
+            await DownloadGameAsync(version, localization, cancellationToken);
 
             // Проверяем целостность exe перед запуском
             var gameDir = Path.Combine(_gameDir, version.Branch, "package", "game", "latest");
             var clientPath = Path.Combine(gameDir, "Client", PlatformHelper.GetGameExecutable());
-            
+
             LogService.LogGameVerbose($"Checking executable: {clientPath}");
-            
+
             if (!IsValidExecutable(clientPath))
             {
                 LogService.LogError($"Invalid executable detected: {clientPath}");
@@ -368,7 +433,7 @@ namespace HyTaLauncher.Services
 
             LogService.LogGameVerbose("Executable validation passed");
             StatusChanged?.Invoke(localization.Get("status.launching"));
-            
+
             try
             {
                 LaunchGame(playerName, version);
@@ -376,7 +441,7 @@ namespace HyTaLauncher.Services
             catch (Exception ex)
             {
                 // Если ошибка запуска связана с повреждёнными файлами - предлагаем переустановку
-                if (ex.Message.Contains("параллельная конфигурация") || 
+                if (ex.Message.Contains("параллельная конфигурация") ||
                     ex.Message.Contains("side-by-side configuration") ||
                     ex.Message.Contains("VCRUNTIME") ||
                     ex.Message.Contains("MSVCP") ||
@@ -402,7 +467,7 @@ namespace HyTaLauncher.Services
             try
             {
                 var fileInfo = new FileInfo(path);
-                
+
                 // Минимальный размер для валидного исполняемого файла
                 if (fileInfo.Length < 4096)
                     return false;
@@ -431,7 +496,7 @@ namespace HyTaLauncher.Services
                             stream.Seek(peOffset, SeekOrigin.Begin);
                             var peBuffer = new byte[4];
                             stream.Read(peBuffer, 0, 4);
-                            
+
                             // PE\0\0 = 0x50 0x45 0x00 0x00
                             if (peBuffer[0] != 0x50 || peBuffer[1] != 0x45 || peBuffer[2] != 0x00 || peBuffer[3] != 0x00)
                                 return false;
@@ -469,7 +534,7 @@ namespace HyTaLauncher.Services
             }
         }
 
-        private async Task DownloadJreAsync(string branch, LocalizationService localization)
+        private async Task DownloadJreAsync(string branch, LocalizationService localization, CancellationToken cancellationToken = default)
         {
             var jreDir = Path.Combine(_gameDir, branch, "package", "jre", "latest");
             var javaExe = Path.Combine(jreDir, "bin", PlatformHelper.GetJavaExecutable());
@@ -488,8 +553,13 @@ namespace HyTaLauncher.Services
 
             try
             {
-                var response = await _httpClient.GetStringAsync(
-                    $"https://launcher.hytale.com/version/{branch}/jre.json");
+                var response = await _httpService.GetStringAsync(
+                    $"https://launcher.hytale.com/version/{branch}/jre.json",
+                    cancellationToken: cancellationToken);
+
+                if (string.IsNullOrEmpty(response))
+                    throw new Exception("Failed to get JRE info - no response");
+
                 var jreData = JsonConvert.DeserializeObject<JreData>(response);
 
                 if (jreData?.DownloadUrl == null)
@@ -511,7 +581,15 @@ namespace HyTaLauncher.Services
                 LogService.LogGameVerbose($"JRE download URL: {platform.Url}");
                 LogService.LogGameVerbose($"JRE cache path: {cachePath}");
 
-                await DownloadFileAsync(platform.Url, cachePath);
+                var downloadResult = await _httpService.DownloadFileAsync(
+                    platform.Url,
+                    cachePath,
+                    cancellationToken: cancellationToken);
+
+                if (!downloadResult.Success)
+                {
+                    throw new Exception($"JRE download failed: {downloadResult.ErrorMessage}");
+                }
 
                 StatusChanged?.Invoke(localization.Get("status.extracting_java"));
                 LogService.LogGameVerbose($"Extracting JRE to: {jreDir}");
@@ -519,17 +597,22 @@ namespace HyTaLauncher.Services
 
                 FlattenDirectory(jreDir);
 
-                File.Delete(cachePath);
+                SafeDeleteFile(cachePath);
                 LogService.LogGame("JRE installation completed");
             }
-            catch (HttpRequestException ex)
+            catch (OperationCanceledException)
+            {
+                LogService.LogGame("JRE download cancelled");
+                throw;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 LogService.LogGameVerbose($"JRE download failed, using system Java: {ex.Message}");
                 StatusChanged?.Invoke(localization.Get("status.system_java"));
             }
         }
 
-        private async Task DownloadGameAsync(GameVersion version, LocalizationService localization)
+        private async Task DownloadGameAsync(GameVersion version, LocalizationService localization, CancellationToken cancellationToken = default)
         {
             var gameDir = Path.Combine(_gameDir, version.Branch, "package", "game", "latest");
             var clientPath = Path.Combine(gameDir, "Client", PlatformHelper.GetGameExecutable());
@@ -545,7 +628,7 @@ namespace HyTaLauncher.Services
             {
                 int.TryParse(File.ReadAllText(versionFile).Trim(), out installedVersion);
             }
-            
+
             LogService.LogGameVerbose($"Installed version: {installedVersion}, target version: {version.Version}");
 
             int targetVersion = version.Version;
@@ -570,7 +653,7 @@ namespace HyTaLauncher.Services
 
             // Определяем путь обновления
             var updatePath = new List<(int prev, int target)>();
-            
+
             // Если включено "Всегда полная версия" или нет установленной версии - качаем полную
             if (AlwaysFullDownload || installedVersion == 0)
             {
@@ -614,11 +697,10 @@ namespace HyTaLauncher.Services
                 long expectedSize = 0;
                 try
                 {
-                    using var headRequest = new HttpRequestMessage(HttpMethod.Head, pwrUrl);
-                    using var headResponse = await _quickClient.SendAsync(headRequest);
-                    if (headResponse.IsSuccessStatusCode)
+                    var (exists, size) = await _quickHttpService.HeadAsync(pwrUrl);
+                    if (exists && size.HasValue)
                     {
-                        expectedSize = headResponse.Content.Headers.ContentLength ?? 0;
+                        expectedSize = size.Value;
                     }
                 }
                 catch { }
@@ -653,8 +735,19 @@ namespace HyTaLauncher.Services
                 if (needsDownload)
                 {
                     LogService.LogGame($"Downloading PWR file: {pwrUrl}");
-                    await DownloadFileAsync(pwrUrl, pwrPath, expectedSize);
-                    
+                    var downloadResult = await _httpService.DownloadFileAsync(
+                        pwrUrl,
+                        pwrPath,
+                        RetryConfig.LargeFile,
+                        expectedSize,
+                        cancellationToken: cancellationToken);
+
+                    if (!downloadResult.Success)
+                    {
+                        LogService.LogError($"PWR download failed: {downloadResult.ErrorMessage}");
+                        throw new Exception($"Download failed: {downloadResult.ErrorMessage}");
+                    }
+
                     // Проверяем размер после скачивания
                     if (expectedSize > 0)
                     {
@@ -663,15 +756,15 @@ namespace HyTaLauncher.Services
                         if (downloadedSize != expectedSize)
                         {
                             LogService.LogError($"Download incomplete: {downloadedSize}/{expectedSize} bytes");
-                            File.Delete(pwrPath);
+                            SafeDeleteFile(pwrPath);
                             throw new Exception($"Download incomplete: {downloadedSize}/{expectedSize} bytes");
                         }
                     }
-                    LogService.LogGameVerbose("PWR download completed successfully");
+                    LogService.LogGameVerbose($"PWR download completed successfully (resumed: {downloadResult.WasResumed}, attempts: {downloadResult.AttemptsUsed})");
                 }
 
                 StatusChanged?.Invoke(localization.Get("status.applying_patch"));
-                
+
                 try
                 {
                     LogService.LogGame($"Applying patch: {pwrPath}");
@@ -681,72 +774,72 @@ namespace HyTaLauncher.Services
                 catch (Exception ex)
                 {
                     LogService.LogError($"Patch failed: {prevVer}->{targetVer}", ex);
-                    
+
                     // Если это инкрементальный патч и он не сработал - пробуем полную установку
                     if (prevVer > 0)
                     {
                         var logPath = Path.Combine(_launcherDir, "butler.log");
                         File.AppendAllText(logPath, $"[{DateTime.Now}] Patch {prevVer}->{targetVer} failed: {ex.Message}\n");
-                        
+
                         StatusChanged?.Invoke(localization.Get("status.patch_failed_full"));
-                        
+
                         // Удаляем повреждённую установку
                         if (Directory.Exists(gameDir))
                         {
                             try { Directory.Delete(gameDir, true); } catch { }
                         }
-                        
+
                         // Удаляем файл версии
                         if (File.Exists(versionFile))
                         {
                             try { File.Delete(versionFile); } catch { }
                         }
-                        
+
                         // Рекурсивно вызываем установку с нуля (будет использована полная версия)
-                        await DownloadGameAsync(version, localization);
+                        await DownloadGameAsync(version, localization, cancellationToken);
                         return;
                     }
-                    
+
                     // Если это была полная установка - пробрасываем ошибку
                     throw;
                 }
-                
+
                 // Проверяем целостность после патча (валидный PE файл)
                 LogService.LogGameVerbose($"Validating executable after patch: {clientPath}");
                 if (!IsValidExecutable(clientPath))
                 {
                     LogService.LogError($"Corrupted executable after patch {prevVer}->{targetVer}");
-                    
+
                     // Если это инкрементальный патч - пробуем полную установку
                     if (prevVer > 0)
                     {
                         var logPath = Path.Combine(_launcherDir, "butler.log");
                         File.AppendAllText(logPath, $"[{DateTime.Now}] Corrupted exe after patch {prevVer}->{targetVer}, retrying with full install\n");
-                        
+
                         StatusChanged?.Invoke(localization.Get("status.corrupted_retry_full"));
-                        
+
                         // Удаляем повреждённую установку
                         if (Directory.Exists(gameDir))
                         {
                             try { Directory.Delete(gameDir, true); } catch { }
                         }
-                        
+
                         if (File.Exists(versionFile))
                         {
                             try { File.Delete(versionFile); } catch { }
                         }
-                        
+
                         // Рекурсивно вызываем установку с нуля
-                        await DownloadGameAsync(version, localization);
+                        await DownloadGameAsync(version, localization, cancellationToken);
                         return;
                     }
-                    
+
                     // Если это была полная установка - ошибка
                     if (File.Exists(versionFile))
                         File.Delete(versionFile);
                     throw new Exception("Game files corrupted after patch. Please try reinstalling.");
                 }
-                
+
                 // Обновляем версию после каждого патча
                 File.WriteAllText(versionFile, targetVer.ToString());
                 LogService.LogGameVerbose($"Version file updated to: {targetVer}");
@@ -796,82 +889,17 @@ namespace HyTaLauncher.Services
             return path;
         }
 
-        private async Task DownloadFileAsync(string url, string destPath, long expectedSize = -1)
+        /// <summary>
+        /// Safely deletes a file without throwing exceptions
+        /// </summary>
+        private static void SafeDeleteFile(string path)
         {
-            LogService.LogNetworkVerbose($"Starting download: {url}");
-            LogService.LogNetworkVerbose($"Destination: {destPath}");
-            
-            var tempPath = destPath + ".tmp";
-            long existingBytes = 0;
-            
-            // Проверяем есть ли частично скачанный файл
-            if (File.Exists(tempPath))
+            try
             {
-                existingBytes = new FileInfo(tempPath).Length;
-                LogService.LogNetworkVerbose($"Resuming from existing temp file: {existingBytes} bytes");
+                if (File.Exists(path))
+                    File.Delete(path);
             }
-
-            // Создаём запрос с поддержкой докачки
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            
-            if (existingBytes > 0)
-            {
-                request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
-                StatusChanged?.Invoke($"Resuming download from {existingBytes / 1024 / 1024}MB...");
-            }
-
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            
-            // Если сервер не поддерживает Range или файл изменился — качаем заново
-            if (existingBytes > 0 && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
-            {
-                LogService.LogNetworkVerbose("Server doesn't support resume, starting fresh download");
-                existingBytes = 0;
-                if (File.Exists(tempPath)) File.Delete(tempPath);
-            }
-            
-            response.EnsureSuccessStatusCode();
-
-            var contentLength = response.Content.Headers.ContentLength ?? -1;
-            var totalBytes = existingBytes + contentLength;
-            
-            if (expectedSize > 0)
-            {
-                totalBytes = expectedSize;
-            }
-            
-            LogService.LogNetworkVerbose($"Content length: {contentLength}, total expected: {totalBytes}");
-
-            await using var contentStream = await response.Content.ReadAsStreamAsync();
-            await using var fileStream = new FileStream(tempPath, 
-                existingBytes > 0 ? FileMode.Append : FileMode.Create, 
-                FileAccess.Write, FileShare.None);
-
-            var buffer = new byte[81920];
-            int bytesRead;
-            var downloadedBytes = existingBytes;
-
-            while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
-            {
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                downloadedBytes += bytesRead;
-
-                if (totalBytes > 0)
-                {
-                    var progress = (double)downloadedBytes / totalBytes * 100;
-                    ProgressChanged?.Invoke(progress);
-                }
-            }
-            
-            // Закрываем поток перед переименованием
-            await fileStream.FlushAsync();
-            fileStream.Close();
-            
-            // Переименовываем .tmp в финальный файл
-            if (File.Exists(destPath)) File.Delete(destPath);
-            File.Move(tempPath, destPath);
-            
-            LogService.LogNetworkVerbose($"Download completed: {downloadedBytes} bytes");
+            catch { }
         }
 
         private async Task ExtractArchiveAsync(string archivePath, string destDir)
@@ -882,7 +910,7 @@ namespace HyTaLauncher.Services
                 {
                     System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, destDir, true);
                 }
-                else if (archivePath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) || 
+                else if (archivePath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ||
                          archivePath.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
                 {
                     // Use system tar on Linux/macOS
@@ -945,14 +973,14 @@ namespace HyTaLauncher.Services
             {
                 throw new FileNotFoundException($"PWR file not found: {pwrPath}");
             }
-            
+
             if (!File.Exists(butlerPath))
             {
                 throw new FileNotFoundException($"Butler not found: {butlerPath}");
             }
 
             var stagingDir = Path.Combine(gameDir, "staging-temp");
-            
+
             // ВАЖНО: Очищаем staging директорию перед использованием
             // Остатки от предыдущих патчей могут вызвать повреждение
             if (Directory.Exists(stagingDir))
@@ -978,16 +1006,16 @@ namespace HyTaLauncher.Services
                     catch { }
                 }
             }
-            
+
             Directory.CreateDirectory(stagingDir);
             Directory.CreateDirectory(gameDir);
 
             StatusChanged?.Invoke(localization.Get("status.applying_patch"));
-            
+
             ProgressChanged?.Invoke(-1);
 
             var arguments = $"apply --staging-dir \"{stagingDir}\" \"{pwrPath}\" \"{gameDir}\"";
-            
+
             // Логируем команду
             var logPath = Path.Combine(_launcherDir, "butler.log");
             File.AppendAllText(logPath, $"\n[{DateTime.Now}] Running: {butlerPath} {arguments}\n");
@@ -1010,7 +1038,7 @@ namespace HyTaLauncher.Services
 
             var stdout = new System.Text.StringBuilder();
             var stderr = new System.Text.StringBuilder();
-            
+
             process.OutputDataReceived += (s, e) => { if (e.Data != null) stdout.AppendLine(e.Data); };
             process.ErrorDataReceived += (s, e) => { if (e.Data != null) stderr.AppendLine(e.Data); };
 
@@ -1019,16 +1047,16 @@ namespace HyTaLauncher.Services
             process.BeginErrorReadLine();
 
             var completed = await Task.Run(() => process.WaitForExit(600000));
-            
+
             // Логируем результат
             File.AppendAllText(logPath, $"Exit code: {process.ExitCode}\n");
             File.AppendAllText(logPath, $"Stdout: {stdout}\n");
             File.AppendAllText(logPath, $"Stderr: {stderr}\n");
-            
+
             if (!completed)
             {
                 process.Kill();
-                
+
                 // Очищаем staging при таймауте
                 try
                 {
@@ -1036,7 +1064,7 @@ namespace HyTaLauncher.Services
                         Directory.Delete(stagingDir, true);
                 }
                 catch { }
-                
+
                 throw new Exception("Butler timeout (10 min)");
             }
 
@@ -1047,7 +1075,7 @@ namespace HyTaLauncher.Services
                     errorMsg = stdout.ToString().Trim();
                 if (string.IsNullOrEmpty(errorMsg))
                     errorMsg = "Unknown error";
-                
+
                 // Очищаем staging при ошибке
                 try
                 {
@@ -1055,7 +1083,7 @@ namespace HyTaLauncher.Services
                         Directory.Delete(stagingDir, true);
                 }
                 catch { }
-                    
+
                 throw new Exception($"Butler error (code {process.ExitCode}): {errorMsg}");
             }
 
@@ -1069,7 +1097,7 @@ namespace HyTaLauncher.Services
             {
                 // Не критично если не удалось удалить
             }
-            
+
             ProgressChanged?.Invoke(100);
             StatusChanged?.Invoke(localization.Get("status.game_installed_done"));
         }
@@ -1098,12 +1126,16 @@ namespace HyTaLauncher.Services
             var butlerUrl = $"https://broth.itch.zone/butler/{butlerPlatform}-{butlerArch}/LATEST/archive/default";
             var zipPath = Path.Combine(_launcherDir, "cache", "butler.zip");
 
-            await DownloadFileAsync(butlerUrl, zipPath);
+            var downloadResult = await _httpService.DownloadFileAsync(butlerUrl, zipPath);
+            if (!downloadResult.Success)
+            {
+                throw new Exception($"Butler download failed: {downloadResult.ErrorMessage}");
+            }
 
             StatusChanged?.Invoke(localization.Get("status.extracting_butler"));
             System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, butlerDir, true);
 
-            File.Delete(zipPath);
+            SafeDeleteFile(zipPath);
 
             // On Linux/macOS, make butler executable
             if (PlatformHelper.CurrentPlatform != PlatformHelper.Platform.Windows)
@@ -1134,7 +1166,7 @@ namespace HyTaLauncher.Services
             var gameDir = Path.Combine(_gameDir, version.Branch, "package", "game", "latest");
             var clientPath = Path.Combine(gameDir, "Client", PlatformHelper.GetGameExecutable());
             var javaExe = GetJavaPath(version.Branch);
-            
+
             // Get UserData path - use modpack path if selected, otherwise default
             var userDataDir = GetUserDataPath();
             Directory.CreateDirectory(userDataDir);
@@ -1143,6 +1175,7 @@ namespace HyTaLauncher.Services
             LogService.LogGameVerbose($"Java path: {javaExe}");
             LogService.LogGameVerbose($"User data dir: {userDataDir}");
             LogService.LogGameVerbose($"Selected modpack: {SelectedModpackId ?? "default"}");
+            LogService.LogGameVerbose($"Run as admin: {RunGameAsAdmin}");
 
             if (!File.Exists(clientPath))
             {
@@ -1170,22 +1203,49 @@ namespace HyTaLauncher.Services
             {
                 arguments = $"--app-dir \"{gameDir}\" --java-exec \"{javaExe}\" --user-dir \"{userDataDir}\" --auth-mode offline --uuid {uuid} --name {playerName}";
             }
-            
+
             LogService.LogGameVerbose($"Launch arguments: {arguments}");
 
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = clientPath,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    WorkingDirectory = Path.GetDirectoryName(clientPath)
-                }
-            };
+            var workingDir = Path.GetDirectoryName(clientPath);
 
-            process.Start();
-            LogService.LogGame($"Game process started: PID={process.Id}");
+            // Launch game with or without admin privileges
+            Process? process;
+            if (RunGameAsAdmin)
+            {
+                LogService.LogGame("Starting game as administrator...");
+                process = AdminHelper.StartAsAdmin(clientPath, arguments, workingDir);
+
+                if (process == null)
+                {
+                    // User cancelled UAC or error occurred
+                    LogService.LogGame("Admin launch cancelled or failed, trying normal launch");
+                    process = AdminHelper.StartNormal(clientPath, arguments, workingDir);
+                }
+            }
+            else
+            {
+                process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = clientPath,
+                        Arguments = arguments,
+                        UseShellExecute = false,
+                        WorkingDirectory = workingDir
+                    }
+                };
+                process.Start();
+            }
+
+            if (process != null)
+            {
+                LogService.LogGame($"Game process started: PID={process.Id}");
+            }
+            else
+            {
+                LogService.LogError("Failed to start game process");
+                throw new Exception("Failed to start game process");
+            }
         }
 
         /// <summary>
@@ -1195,22 +1255,22 @@ namespace HyTaLauncher.Services
         private string GetUserDataPath()
         {
             var hytaleDir = Path.GetDirectoryName(_gameDir); // %AppData%\Hytale
-            
+
             if (!string.IsNullOrEmpty(SelectedModpackId))
             {
                 // Use modpack-specific UserData directory
                 var modpackService = new ModpackService(hytaleDir);
                 var modpack = modpackService.GetModpack(SelectedModpackId);
-                
+
                 if (modpack != null)
                 {
                     return modpackService.GetModpackUserDataPath(SelectedModpackId);
                 }
-                
+
                 // Modpack not found, fall back to default
                 LogService.LogMods($"Selected modpack {SelectedModpackId} not found, using default UserData");
             }
-            
+
             // Default UserData directory
             return Path.Combine(hytaleDir!, "UserData");
         }
@@ -1219,7 +1279,7 @@ namespace HyTaLauncher.Services
         {
             var uuidFile = Path.Combine(_launcherDir, "players.json");
             var players = new Dictionary<string, string>();
-            
+
             // Загружаем существующие UUID
             if (File.Exists(uuidFile))
             {
@@ -1230,7 +1290,7 @@ namespace HyTaLauncher.Services
                 }
                 catch { }
             }
-            
+
             // Ищем или создаём UUID для никнейма (используем lowercase для стабильности)
             var key = playerName.ToLowerInvariant();
             if (!players.TryGetValue(key, out var uuid))
@@ -1238,7 +1298,7 @@ namespace HyTaLauncher.Services
                 // Генерируем UUID БЕЗ дефисов (формат для Minecraft/Hytale)
                 uuid = Guid.NewGuid().ToString("N"); // "N" = 32 символа без дефисов
                 players[key] = uuid;
-                
+
                 // Сохраняем
                 try
                 {
@@ -1253,7 +1313,7 @@ namespace HyTaLauncher.Services
                 {
                     uuid = uuid.Replace("-", "");
                     players[key] = uuid;
-                    
+
                     // Сохраняем обновлённый формат
                     try
                     {
@@ -1262,7 +1322,7 @@ namespace HyTaLauncher.Services
                     catch { }
                 }
             }
-            
+
             return uuid;
         }
 
@@ -1277,21 +1337,21 @@ namespace HyTaLauncher.Services
             {
                 var hytaleDir = Path.GetDirectoryName(_gameDir); // %AppData%\Hytale
                 if (string.IsNullOrEmpty(hytaleDir)) return;
-                
+
                 var newUserDataDir = Path.Combine(hytaleDir, "UserData");
                 var migrationMarker = Path.Combine(newUserDataDir, ".migrated");
-                
+
                 // Если уже мигрировали - пропускаем
                 if (File.Exists(migrationMarker)) return;
-                
+
                 var oldUserDataDirs = new List<string>();
-                
+
                 // Ищем старые папки UserData во всех ветках и версиях
                 foreach (var branch in AvailableBranches)
                 {
                     var branchDir = Path.Combine(_gameDir, branch, "package", "game");
                     if (!Directory.Exists(branchDir)) continue;
-                    
+
                     // Проверяем все версии (latest, 1, 2, 3...)
                     foreach (var versionDir in Directory.GetDirectories(branchDir))
                     {
@@ -1302,18 +1362,18 @@ namespace HyTaLauncher.Services
                         }
                     }
                 }
-                
+
                 if (oldUserDataDirs.Count == 0) return;
-                
+
                 // Создаём новую папку
                 Directory.CreateDirectory(newUserDataDir);
-                
+
                 // Копируем данные из всех найденных папок (более новые перезаписывают старые)
                 foreach (var oldDir in oldUserDataDirs)
                 {
                     CopyDirectoryContents(oldDir, newUserDataDir);
                 }
-                
+
                 // Создаём маркер миграции
                 File.WriteAllText(migrationMarker, $"Migrated on {DateTime.Now}\nFrom: {string.Join("\n", oldUserDataDirs)}");
             }
@@ -1322,11 +1382,11 @@ namespace HyTaLauncher.Services
                 // Игнорируем ошибки миграции - не критично
             }
         }
-        
+
         private void CopyDirectoryContents(string sourceDir, string destDir)
         {
             Directory.CreateDirectory(destDir);
-            
+
             // Копируем файлы
             foreach (var file in Directory.GetFiles(sourceDir))
             {
@@ -1337,7 +1397,7 @@ namespace HyTaLauncher.Services
                     File.Copy(file, destFile, true);
                 }
             }
-            
+
             // Рекурсивно копируем подпапки
             foreach (var dir in Directory.GetDirectories(sourceDir))
             {
@@ -1416,6 +1476,22 @@ namespace HyTaLauncher.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Disposes resources used by GameLauncher
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _currentOperationCts?.Cancel();
+                _currentOperationCts?.Dispose();
+                _httpService.Dispose();
+                _quickHttpService.Dispose();
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
         }
     }
 

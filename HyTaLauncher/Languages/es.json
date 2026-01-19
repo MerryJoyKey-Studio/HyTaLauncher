@@ -8,7 +8,7 @@
   "main.settings": "⚙ Ajustes",
   "main.mods": "Mods",
   "main.preparing": "Preparando...",
-  "main.footer": "HyTaLauncher v1.0.6 • Launcher no oficial",
+  "main.footer": "HyTaLauncher v1.0.7 • Launcher no oficial",
   "main.disclaimer": "Este es un proyecto hecho por fans y sin fines de lucro. Si te gusta el juego, cómpralo en:",
   "main.versions_found": "Versiones encontradas: {0}",
   "main.latest": "Última versión",
@@ -56,7 +56,7 @@
   "settings.game_folder": "DIRECTORIO DEL JUEGO",
   "settings.api_key": "CLAVE DE API DE CURSEFORGE",
   "settings.api_key_hint": "Consigue tu clave de API en console.curseforge.com",
-  "settings.info": "HyTaLauncher v1.0.6",
+  "settings.info": "HyTaLauncher v1.0.7",
   "settings.info_desc": "Launcher no oficial de Hytale",
   "settings.cancel": "Cancelar",
   "settings.save": "Guardar",
@@ -145,7 +145,7 @@
   "mods.filter.release": "Estable",
   "mods.filter.beta": "Beta",
   "mods.filter.alpha": "Alpha",
-  
+
   "mods.sort.popularity": "Popularidad",
   "mods.sort.downloads": "Descargas",
   "mods.sort.updated": "Actualizado",
@@ -208,5 +208,29 @@
   "advanced.folder_mods": "Mods",
   "advanced.server_not_found": "Servidor no instalado para esta rama",
   "advanced.server_saved": "¡Configuración del servidor guardada!",
-  "advanced.folder_not_exists": "La carpeta no existe"
+  "advanced.folder_not_exists": "La carpeta no existe",
+
+  "settings.ssl": "CERTIFICADO SSL",
+  "settings.bypass_ssl": "Omitir validación SSL",
+  "settings.ssl_hint": "Habilita solo si tienes errores de SSL/certificado. Puede reducir la seguridad.",
+  "settings.ssl_error_title": "Error SSL",
+  "settings.ssl_error_message": "No se pudo establecer una conexión segura.\n\nEsto puede ser causado por:\n- Antivirus/firewall bloqueando conexiones\n- Proxy corporativo\n- Problemas de red\n\n¿Deseas habilitar el bypass SSL?",
+  "settings.ssl_enable_bypass_hint": "El bypass SSL ha sido habilitado. Por favor, intenta de nuevo.",
+  "settings.ssl_bypass_enabled": "El bypass SSL está habilitado",
+
+  "settings.admin": "ADMINISTRADOR",
+  "settings.run_game_admin": "Ejecutar juego como administrador",
+  "settings.run_server_admin": "Ejecutar servidor como administrador",
+  "settings.run_launcher_admin": "Ejecutar launcher como administrador",
+  "settings.restart_as_admin": "Reiniciar como Administrador",
+  "settings.admin_hint": "Puede ayudar si el juego tiene problemas de permisos",
+  "settings.running_as_admin": "Ejecutando como Administrador",
+  "settings.running_as_user": "Ejecutando como Usuario",
+  "settings.admin_restart_failed": "Error al reiniciar como administrador",
+  "settings.restart_admin_confirm": "El launcher necesita reiniciarse con privilegios de administrador.\n\n¿Continuar?",
+
+  "status.ssl_error": "Error de conexión SSL",
+  "status.connection_failed": "Error de conexión",
+  "status.retrying": "Reintentando ({0}/{1})...",
+  "status.retry_failed": "Todos los intentos de reintento fallaron"
 }

@@ -13,7 +13,7 @@
             CornerRadius="12"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1">
-        
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>
@@ -22,18 +22,18 @@
             </Grid.RowDefinitions>
 
             <!-- Title Bar -->
-            <Border Grid.Row="0" 
+            <Border Grid.Row="0"
                     Background="#0Affffff"
                     CornerRadius="12,12,0,0"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
-                    <TextBlock Text="⚙ Настройки" 
+                    <TextBlock Text="⚙ Настройки"
                                FontSize="14"
                                FontWeight="Bold"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                VerticalAlignment="Center"
                                Margin="18,0,0,0"/>
-                    <Button Content="✕" 
+                    <Button Content="✕"
                             Style="{StaticResource CloseButton}"
                             HorizontalAlignment="Right"
                             Click="CloseButton_Click"/>
@@ -41,11 +41,11 @@
             </Border>
 
             <!-- Content -->
-            <ScrollViewer Grid.Row="1" 
+            <ScrollViewer Grid.Row="1"
                           VerticalScrollBarVisibility="Auto"
                           Margin="24,16,24,8">
                 <StackPanel>
-                    
+
                     <!-- Game Directory -->
                     <TextBlock x:Name="GameDirLabel"
                                Text="GAME FOLDER"
@@ -86,7 +86,7 @@
                               Margin="0,0,0,6"
                               Checked="UseMirrorCheckBox_Changed"
                               Unchecked="UseMirrorCheckBox_Changed">
-                        <TextBlock x:Name="UseMirrorText" 
+                        <TextBlock x:Name="UseMirrorText"
                                    Text="Use mirror server"
                                    TextWrapping="Wrap"/>
                     </CheckBox>
@@ -190,12 +190,105 @@
                               FontSize="12"
                               Margin="0,0,0,6"
                               IsChecked="True">
-                        <TextBlock x:Name="AlwaysFullDownloadText" 
+                        <TextBlock x:Name="AlwaysFullDownloadText"
                                    Text="Always download full version"
                                    TextWrapping="Wrap"/>
                     </CheckBox>
                     <TextBlock x:Name="DownloadHintText"
                                Text="Recommended. Disabling may cause corrupted files when updating."
+                               FontSize="11"
+                               Foreground="#ff9800"
+                               TextWrapping="Wrap"
+                               Margin="24,0,0,16"/>
+
+                    <!-- Run as Administrator -->
+                    <TextBlock x:Name="AdminLabel"
+                               Text="RUN AS ADMINISTRATOR"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <CheckBox x:Name="RunGameAsAdminCheckBox"
+                              Foreground="{StaticResource TextBrush}"
+                              FontSize="12"
+                              Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🎮 " FontSize="12"/>
+                            <TextBlock x:Name="RunGameAsAdminText"
+                                       Text="Run game as administrator"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <CheckBox x:Name="RunServerAsAdminCheckBox"
+                              Foreground="{StaticResource TextBrush}"
+                              FontSize="12"
+                              Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🖥️ " FontSize="12"/>
+                            <TextBlock x:Name="RunServerAsAdminText"
+                                       Text="Run server as administrator"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <CheckBox x:Name="RunLauncherAsAdminCheckBox"
+                                  Foreground="{StaticResource TextBrush}"
+                                  FontSize="12"
+                                  Checked="RunLauncherAsAdminCheckBox_Changed"
+                                  Unchecked="RunLauncherAsAdminCheckBox_Changed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🚀 " FontSize="12"/>
+                                <TextBlock x:Name="RunLauncherAsAdminText"
+                                           Text="Run launcher as administrator"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </StackPanel>
+                    <Button x:Name="RestartAsAdminBtn"
+                            Style="{StaticResource ModernButton}"
+                            Background="#4d3a00"
+                            Padding="14,8"
+                            FontSize="12"
+                            Margin="0,4,0,0"
+                            Click="RestartAsAdminButton_Click"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔄" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="RestartAsAdminBtnText" Text="Restart as Administrator"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock x:Name="AdminStatusText"
+                               Text=""
+                               FontSize="11"
+                               Foreground="#4CAF50"
+                               Margin="0,6,0,0"/>
+                    <TextBlock x:Name="AdminHintText"
+                               Text="Running as administrator may help with permission issues"
+                               FontSize="11"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,6,0,16"/>
+
+                    <!-- SSL Settings -->
+                    <TextBlock x:Name="SslLabel"
+                               Text="SSL/NETWORK"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <CheckBox x:Name="BypassSslCheckBox"
+                              Foreground="{StaticResource TextBrush}"
+                              FontSize="12"
+                              Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔓 " FontSize="12"/>
+                            <TextBlock x:Name="BypassSslText"
+                                       Text="Bypass SSL certificate validation"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock x:Name="SslHintText"
+                               Text="Enable if you get SSL errors (antivirus/corporate proxy). Less secure but may fix connection issues."
                                FontSize="11"
                                Foreground="#ff9800"
                                TextWrapping="Wrap"
@@ -220,7 +313,7 @@
                                Text="Requires restart to apply"
                             FontSize="11"
                                Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,6,0,16"/>   
+                               Margin="0,6,0,16"/>
 
                     <!-- Verbose Logging -->
                     <TextBlock x:Name="LoggingLabel"
@@ -233,7 +326,7 @@
                               Foreground="{StaticResource TextBrush}"
                               FontSize="12"
                               Margin="0,0,0,6">
-                        <TextBlock x:Name="VerboseLoggingText" 
+                        <TextBlock x:Name="VerboseLoggingText"
                                    Text="Enable verbose logging"
                                    TextWrapping="Wrap"/>
                     </CheckBox>

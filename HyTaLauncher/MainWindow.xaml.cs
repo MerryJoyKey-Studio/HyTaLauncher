@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using HyTaLauncher.Helpers;
 using HyTaLauncher.Services;
+using Process = System.Diagnostics.Process;
 
 namespace HyTaLauncher
 {
@@ -17,25 +19,26 @@ namespace HyTaLauncher
         private readonly UpdateService _updateService;
         private readonly ModpackService _modpackService;
         private List<GameVersion> _versions = new List<GameVersion>();
+        private CancellationTokenSource? _currentOperationCts;
 
         public MainWindow()
         {
             _settings = new SettingsManager();
-            
+
             // Загружаем шрифты из файлов с учётом настроек
             var settings = _settings.Load();
-            
+
             // Устанавливаем verbose logging из настроек
             LogService.VerboseLogging = settings.VerboseLogging;
             LogService.LogGame("=== HyTaLauncher starting ===");
             LogService.LogGameVerbose($"Verbose logging: {settings.VerboseLogging}");
             LogService.LogGameVerbose($"Game directory: {settings.GameDirectory}");
             LogService.LogGameVerbose($"Language: {settings.Language}");
-            
+
             FontHelper.Initialize(settings.FontName ?? "Inter");
-            
+
             InitializeComponent();
-            
+
             // Применяем шрифт ко всему окну
             if (FontHelper.CurrentFont != null)
             {
@@ -46,21 +49,21 @@ namespace HyTaLauncher
             _localization = new LocalizationService();
             _updateService = new UpdateService();
             _modpackService = new ModpackService();
-            
+
             _localization.LanguageChanged += UpdateUI;
             _modpackService.ModpacksChanged += LoadModpacks;
-            
+
             LoadSettings();
-            
-            // Миграция данных из старых папок UserData в новую общую папку (v1.0.6)
+
+            // Миграция данных из старых папок UserData в новую общую папку (v1.0.7)
             LogService.LogGameVerbose("Checking for UserData migration...");
             _gameLauncher.MigrateUserData();
             InitializeLanguages();
             UpdateUI();
-            
+
             _gameLauncher.ProgressChanged += OnProgressChanged;
             _gameLauncher.StatusChanged += OnStatusChanged;
-            
+
             Loaded += async (s, e) =>
             {
                 LogService.LogGameVerbose("MainWindow loaded, starting initialization...");
@@ -77,20 +80,20 @@ namespace HyTaLauncher
         {
             var modpacks = _modpackService.GetAllModpacks();
             var selectedId = _settings.Load().SelectedModpackId;
-            
+
             // Create list with "Default" option first
             var items = new List<ModpackComboItem>
             {
                 new ModpackComboItem { Id = null, Name = _localization.Get("main.modpack_default") }
             };
-            
+
             foreach (var modpack in modpacks)
             {
                 items.Add(new ModpackComboItem { Id = modpack.Id, Name = modpack.Name });
             }
-            
+
             ModpackComboBox.ItemsSource = items;
-            
+
             // Select the saved modpack or default
             var selectedIndex = 0;
             if (!string.IsNullOrEmpty(selectedId))
@@ -108,9 +111,9 @@ namespace HyTaLauncher
                     _settings.Save(settings);
                 }
             }
-            
+
             ModpackComboBox.SelectedIndex = selectedIndex;
-            
+
             // Update GameLauncher with selected modpack
             UpdateGameLauncherModpack();
         }
@@ -141,10 +144,10 @@ namespace HyTaLauncher
             ReinstallButton.ToolTip = _localization.Get("main.reinstall");
             WebsiteText.Text = _localization.Get("main.website");
             DiscordText.Text = _localization.Get("main.discord");
-            
+
             // Refresh modpack list to update "Default" text
             LoadModpacks();
-            
+
             CheckServerAvailable();
             UpdateReinstallButtonVisibility();
         }
@@ -158,15 +161,21 @@ namespace HyTaLauncher
             _gameLauncher.UseMirror = settings.UseMirror;
             _gameLauncher.AlwaysFullDownload = settings.AlwaysFullDownload;
             _gameLauncher.CustomGameArgs = settings.CustomGameArgs;
-            
+
             // Инициализируем подробное логирование
             LogService.VerboseLogging = settings.VerboseLogging;
-            
+
             // Устанавливаем папку игры
             if (!string.IsNullOrEmpty(settings.GameDirectory))
             {
                 _gameLauncher.GameDirectory = settings.GameDirectory;
             }
+
+            // Устанавливаем запуск от админа
+            _gameLauncher.RunGameAsAdmin = settings.RunGameAsAdmin;
+
+            // Устанавливаем настройку SSL
+            _gameLauncher.BypassSslValidation = settings.BypassSslValidation;
         }
 
         private void SaveSettings()
@@ -191,7 +200,7 @@ namespace HyTaLauncher
             {
                 // Проверяем есть ли portable версия для автообновления
                 var hasPortable = !string.IsNullOrEmpty(update.PortableDownloadUrl);
-                
+
                 var message = hasPortable
                     ? string.Format(_localization.Get("update.message_auto"), update.Version, UpdateService.CurrentVersion)
                     : string.Format(_localization.Get("update.message"), update.Version, UpdateService.CurrentVersion);
@@ -244,7 +253,7 @@ namespace HyTaLauncher
                         MessageBoxButton.OK,
                         MessageBoxImage.Information
                     );
-                    
+
                     // Закрываем приложение - скрипт перезапустит
                     Application.Current.Shutdown();
                 }
@@ -291,7 +300,7 @@ namespace HyTaLauncher
             var branch = GetSelectedBranch();
             LogService.LogGame($"Loading versions for branch: {branch}");
             LogService.LogGameVerbose($"Mirror enabled: {_gameLauncher.UseMirror}");
-            
+
             VersionComboBox.IsEnabled = false;
             PlayButton.IsEnabled = false;
             RefreshButton.IsEnabled = false;
@@ -300,20 +309,20 @@ namespace HyTaLauncher
             try
             {
                 _versions = await _gameLauncher.GetAvailableVersionsAsync(branch, _localization);
-                
+
                 LogService.LogGame($"Found {_versions.Count} versions for branch {branch}");
                 LogService.LogGameVerbose($"Versions: {string.Join(", ", _versions.Select(v => v.Version))}");
-                
+
                 // Сохраняем версии для определения базы при установке
                 _gameLauncher.SetVersionsCache(_versions);
-                
+
                 VersionComboBox.ItemsSource = _versions;
                 if (_versions.Count > 0)
                 {
                     VersionComboBox.SelectedIndex = 0;
                     VersionComboBox.IsEnabled = true;
                 }
-                
+
                 StatusText.Text = string.Format(_localization.Get("main.versions_found"), _versions.Count);
             }
             catch (Exception ex)
@@ -379,12 +388,12 @@ namespace HyTaLauncher
         {
             var nickname = NicknameTextBox.Text.Trim();
             LogService.LogGameVerbose($"Play button clicked, nickname: {nickname}");
-            
+
             if (string.IsNullOrEmpty(nickname))
             {
                 LogService.LogGameVerbose("Nickname is empty, showing error");
-                MessageBox.Show(_localization.Get("error.nickname_empty"), 
-                    _localization.Get("error.title"), 
+                MessageBox.Show(_localization.Get("error.nickname_empty"),
+                    _localization.Get("error.title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -392,7 +401,7 @@ namespace HyTaLauncher
             if (nickname.Length < 3 || nickname.Length > 16)
             {
                 LogService.LogGameVerbose($"Nickname length invalid: {nickname.Length}");
-                MessageBox.Show(_localization.Get("error.nickname_length"), 
+                MessageBox.Show(_localization.Get("error.nickname_length"),
                     _localization.Get("error.title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -402,7 +411,7 @@ namespace HyTaLauncher
             if (selectedVersion == null)
             {
                 LogService.LogGameVerbose("No version selected");
-                MessageBox.Show(_localization.Get("error.version_select"), 
+                MessageBox.Show(_localization.Get("error.version_select"),
                     _localization.Get("error.title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -410,11 +419,18 @@ namespace HyTaLauncher
 
             LogService.LogGame($"Starting game launch: player={nickname}, version={selectedVersion.Version}, branch={selectedVersion.Branch}");
             LogService.LogGameVerbose($"Selected modpack: {_gameLauncher.SelectedModpackId ?? "default"}");
-            
+
             SaveSettings();
-            
+
             PlayButton.IsEnabled = false;
             ProgressPanel.Visibility = Visibility.Visible;
+            CancelButton.Visibility = Visibility.Visible;
+
+            // Create new cancellation token for this operation
+            _currentOperationCts?.Cancel();
+            _currentOperationCts?.Dispose();
+            _currentOperationCts = new CancellationTokenSource();
+            var cancellationToken = _currentOperationCts.Token;
 
             try
             {
@@ -424,10 +440,43 @@ namespace HyTaLauncher
             catch (Exception ex)
             {
                 LogService.LogError($"Game launch failed: {ex.Message}");
-                var errorMsg = string.Format(_localization.Get("error.launch"), ex.Message);
-                
+
+                // Check for SSL errors first
+                if (HttpRetryService.IsSslError(ex))
+                {
+                    LogService.LogError("SSL error detected during game launch");
+                    var settings = _settings.Load();
+
+                    var sslMessage = _localization.Get("settings.ssl_error_message");
+                    if (!settings.BypassSslValidation)
+                    {
+                        sslMessage += "\n\n" + _localization.Get("settings.ssl_enable_bypass_hint");
+                    }
+
+                    var result = MessageBox.Show(
+                        sslMessage,
+                        _localization.Get("settings.ssl_error_title"),
+                        settings.BypassSslValidation ? MessageBoxButton.OK : MessageBoxButton.YesNo,
+                        MessageBoxImage.Error
+                    );
+
+                    // Offer to enable SSL bypass
+                    if (!settings.BypassSslValidation && result == MessageBoxResult.Yes)
+                    {
+                        settings.BypassSslValidation = true;
+                        _settings.Save(settings);
+                        _gameLauncher.BypassSslValidation = true;
+
+                        MessageBox.Show(
+                            _localization.Get("settings.ssl_bypass_enabled"),
+                            _localization.Get("settings.success"),
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information
+                        );
+                    }
+                }
                 // Если ошибка связана с повреждёнными файлами - предлагаем переустановку
-                if (ex.Message.Contains(_localization.Get("error.corrupted_files")) ||
+                else if (ex.Message.Contains(_localization.Get("error.corrupted_files")) ||
                     ex.Message.Contains("corrupted") ||
                     ex.Message.Contains("повреждён"))
                 {
@@ -438,7 +487,7 @@ namespace HyTaLauncher
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Error
                     );
-                    
+
                     if (result == MessageBoxResult.Yes)
                     {
                         // Запускаем переустановку
@@ -462,7 +511,11 @@ namespace HyTaLauncher
                 }
                 else
                 {
-                    MessageBox.Show(errorMsg, 
+                    // Get friendly error message
+                    var friendlyMessage = HttpRetryServiceExtensions.GetFriendlyErrorMessage(ex);
+                    var errorMsg = string.Format(_localization.Get("error.launch"), friendlyMessage);
+
+                    MessageBox.Show(errorMsg,
                         _localization.Get("error.title"),
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 }
@@ -471,7 +524,23 @@ namespace HyTaLauncher
             {
                 PlayButton.IsEnabled = true;
                 ProgressPanel.Visibility = Visibility.Collapsed;
+                CancelButton.Visibility = Visibility.Collapsed;
+                _currentOperationCts?.Dispose();
+                _currentOperationCts = null;
                 ResetProgress();
+            }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            LogService.LogGame("User requested cancellation of current operation");
+
+            if (_currentOperationCts != null && !_currentOperationCts.IsCancellationRequested)
+            {
+                _currentOperationCts.Cancel();
+                _gameLauncher.CancelCurrentOperation();
+                StatusText.Text = _localization.Get("status.cancelling");
+                CancelButton.IsEnabled = false;
             }
         }
 
@@ -532,20 +601,22 @@ namespace HyTaLauncher
             var settingsWindow = new SettingsWindow(_settings, _localization);
             settingsWindow.Owner = this;
             settingsWindow.ShowDialog();
-            
+
             // Обновляем настройки после закрытия окна настроек
             var settings = _settings.Load();
             _gameLauncher.UseMirror = settings.UseMirror;
             _gameLauncher.AlwaysFullDownload = settings.AlwaysFullDownload;
             _gameLauncher.CustomGameArgs = settings.CustomGameArgs;
+            _gameLauncher.RunGameAsAdmin = settings.RunGameAsAdmin;
+            _gameLauncher.BypassSslValidation = settings.BypassSslValidation;
             LogService.VerboseLogging = settings.VerboseLogging;
-            
+
             // Обновляем папку игры
             if (!string.IsNullOrEmpty(settings.GameDirectory))
             {
                 _gameLauncher.GameDirectory = settings.GameDirectory;
             }
-            
+
             // Проверяем доступность сервера (мог быть установлен онлайн фикс)
             CheckServerAvailable();
         }
@@ -555,7 +626,7 @@ namespace HyTaLauncher
             var modsWindow = new ModsWindow(_localization, _settings);
             modsWindow.Owner = this;
             modsWindow.ShowDialog();
-            
+
             // Refresh modpacks after mods window closes (user might have created/deleted modpacks)
             LoadModpacks();
         }
@@ -565,7 +636,7 @@ namespace HyTaLauncher
             var modsWindow = new ModsWindow(_localization, _settings);
             modsWindow.Owner = this;
             modsWindow.ShowDialog();
-            
+
             // Refresh modpacks after mods window closes
             LoadModpacks();
         }
@@ -573,12 +644,12 @@ namespace HyTaLauncher
         private void ModpackComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (!IsLoaded) return;
-            
+
             var selectedItem = ModpackComboBox.SelectedItem as ModpackComboItem;
             var settings = _settings.Load();
             settings.SelectedModpackId = selectedItem?.Id;
             _settings.Save(settings);
-            
+
             UpdateGameLauncherModpack();
         }
 
@@ -646,8 +717,8 @@ namespace HyTaLauncher
         private void CheckServerAvailable()
         {
             var serverBatPath = GetServerBatPath();
-            StartServerButton.Visibility = !string.IsNullOrEmpty(serverBatPath) 
-                ? Visibility.Visible 
+            StartServerButton.Visibility = !string.IsNullOrEmpty(serverBatPath)
+                ? Visibility.Visible
                 : Visibility.Collapsed;
         }
 
@@ -682,7 +753,7 @@ namespace HyTaLauncher
         {
             var serverBatPath = GetServerBatPath();
             LogService.LogGameVerbose($"Starting server, bat path: {serverBatPath}");
-            
+
             if (string.IsNullOrEmpty(serverBatPath))
             {
                 LogService.LogGameVerbose("Server bat path is empty, aborting");
@@ -700,7 +771,7 @@ namespace HyTaLauncher
                     MessageBoxButton.OK,
                     MessageBoxImage.Information
                 );
-                
+
                 settings.ServerInfoShown = true;
                 _settings.Save(settings);
             }
@@ -710,14 +781,36 @@ namespace HyTaLauncher
                 var serverDir = Path.GetDirectoryName(serverBatPath);
                 LogService.LogGame($"Launching server: {serverBatPath}");
                 LogService.LogGameVerbose($"Server working directory: {serverDir}");
-                
-                Process.Start(new ProcessStartInfo
+                LogService.LogGameVerbose($"Run server as admin: {settings.RunServerAsAdmin}");
+
+                Process? serverProcess;
+                if (settings.RunServerAsAdmin)
                 {
-                    FileName = serverBatPath,
-                    WorkingDirectory = serverDir,
-                    UseShellExecute = true
-                });
-                
+                    LogService.LogGame("Starting server as administrator...");
+                    serverProcess = AdminHelper.StartAsAdmin(serverBatPath, null, serverDir);
+
+                    if (serverProcess == null)
+                    {
+                        // User cancelled UAC or error occurred, try normal launch
+                        LogService.LogGame("Admin launch cancelled or failed, trying normal launch");
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = serverBatPath,
+                            WorkingDirectory = serverDir,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = serverBatPath,
+                        WorkingDirectory = serverDir,
+                        UseShellExecute = true
+                    });
+                }
+
                 LogService.LogGame("Server process started");
             }
             catch (Exception ex)
@@ -790,7 +883,7 @@ namespace HyTaLauncher
                 LogoImage.Visibility = Visibility.Collapsed;
                 LogoText.Visibility = Visibility.Visible;
             };
-            
+
             // Проверяем загрузку через таймер (на случай если ImageFailed не сработал)
             var timer = new System.Windows.Threading.DispatcherTimer
             {
@@ -816,7 +909,7 @@ namespace HyTaLauncher
     {
         public string? Id { get; set; }
         public string Name { get; set; } = "";
-        
+
         public override string ToString() => Name;
     }
 }

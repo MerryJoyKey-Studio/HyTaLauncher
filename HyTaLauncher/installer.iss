@@ -2,7 +2,7 @@
 ; Compile with Inno Setup 6.x
 
 #define MyAppName "HyTaLauncher"
-#define MyAppVersion "1.0.5"
+#define MyAppVersion "1.0.7"
 #define MyAppPublisher "HyTaLauncher"
 #define MyAppURL "https://github.com/MerryJoyKey-Studio/HyTaLauncher"
 #define MyAppExeName "HyTaLauncher.exe"
@@ -47,6 +47,7 @@ Name: "main"; Description: "HyTaLauncher"; Types: full compact custom; Flags: fi
 Source: "bin\Release\net8.0-windows\win-x64\publish\HyTaLauncher.exe"; DestDir: "{app}"; Flags: replacesameversion restartreplace
 Source: "Fonts\*"; DestDir: "{app}\Fonts"; Flags: replacesameversion recursesubdirs createallsubdirs 
 Source: "Languages\*"; DestDir: "{app}\Languages"; Flags: replacesameversion recursesubdirs createallsubdirs
+Source: "Addons\*"; DestDir: "{app}\Addons"; Flags: replacesameversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

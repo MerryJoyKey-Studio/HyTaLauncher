@@ -16,30 +16,30 @@ namespace HyTaLauncher
         private readonly ModpackService _modpackService;
         private readonly LocalizationService _localization;
         private readonly SettingsManager _settingsManager;
-        
+
         private int _currentPage = 0;
         private string _currentSearchQuery = "";
         private const int PAGE_SIZE = 20;
-        
+
         // Filter and sort state
         private SearchFilters _currentFilters = new();
         private SortOption _currentSort = SortOption.Popularity;
         private SortOrder _currentSortOrder = SortOrder.Descending;
-        
+
         // Tag filter state
         private string? _selectedTagId = null;
         private List<InstalledMod> _allInstalledMods = new();
-        
+
         // Modpack state
         private string? _selectedModpackId = null;
         private readonly List<ModpackItem> _modpackItems = new();
         private bool _isModpackOperationInProgress = false;
-        
+
         // Filter data items
         private readonly List<FilterItem> _categoryItems = new();
         private readonly List<FilterItem> _gameVersionItems = new();
         private readonly List<SortItem> _sortItems = new();
-        
+
         // Multi-select state
         private bool _isSelectModeActive = false;
         private readonly HashSet<InstalledMod> _selectedMods = new();
@@ -47,7 +47,7 @@ namespace HyTaLauncher
         public ModsWindow(LocalizationService localization, SettingsManager settingsManager)
         {
             InitializeComponent();
-            
+
             if (FontHelper.CurrentFont != null)
             {
                 FontFamily = FontHelper.CurrentFont;
@@ -55,26 +55,26 @@ namespace HyTaLauncher
 
             _localization = localization;
             _settingsManager = settingsManager;
-            
+
             var settings = settingsManager.Load();
             _modService = new ModService(settings.GameDirectory);
             _tagService = new TagService();
             _modpackService = new ModpackService(settings.GameDirectory);
-            
+
             // Load saved sort preference
             _currentSort = (SortOption)settings.ModsSortOption;
             _currentSortOrder = (SortOrder)settings.ModsSortOrder;
-            
+
             _modService.ProgressChanged += OnProgressChanged;
             _modService.StatusChanged += OnStatusChanged;
             _tagService.TagsChanged += OnTagsChanged;
             _modpackService.ModpacksChanged += OnModpacksChanged;
-            
+
             InitializeFilterDropdowns();
             InitializeModpackDropdown();
             UpdateUI();
             RefreshTagFilterPanel();
-            
+
             Loaded += async (s, e) =>
             {
                 await LoadInstalledModsForCurrentModpackAsync();
@@ -87,30 +87,30 @@ namespace HyTaLauncher
             // Initialize Category filter items - load from API
             _categoryItems.Clear();
             _categoryItems.Add(new FilterItem { DisplayName = _localization.Get("mods.filter.all_categories"), Value = null });
-            
+
             // Load categories from CurseForge API
             var categories = await _modService.GetCategoriesAsync();
             foreach (var cat in categories.OrderBy(c => c.Name))
             {
                 _categoryItems.Add(new FilterItem { DisplayName = cat.Name, Value = cat.Id });
             }
-            
+
             CategoryFilter.ItemsSource = _categoryItems;
             CategoryFilter.SelectedIndex = 0;
-            
+
             // Initialize Game Version filter items - load from API
             _gameVersionItems.Clear();
             _gameVersionItems.Add(new FilterItem { DisplayName = _localization.Get("mods.filter.all_versions"), StringValue = null });
-            
+
             var versions = await _modService.GetGameVersionsAsync();
             foreach (var ver in versions)
             {
                 _gameVersionItems.Add(new FilterItem { DisplayName = ver, StringValue = ver });
             }
-            
+
             GameVersionFilter.ItemsSource = _gameVersionItems;
             GameVersionFilter.SelectedIndex = 0;
-            
+
             // Initialize Sort dropdown items
             _sortItems.Clear();
             _sortItems.Add(new SortItem { DisplayName = _localization.Get("mods.sort.popularity"), Sort = SortOption.Popularity, Order = SortOrder.Descending });
@@ -118,9 +118,9 @@ namespace HyTaLauncher
             _sortItems.Add(new SortItem { DisplayName = _localization.Get("mods.sort.updated"), Sort = SortOption.LastUpdated, Order = SortOrder.Descending });
             _sortItems.Add(new SortItem { DisplayName = _localization.Get("mods.sort.name_az"), Sort = SortOption.Name, Order = SortOrder.Ascending });
             _sortItems.Add(new SortItem { DisplayName = _localization.Get("mods.sort.name_za"), Sort = SortOption.Name, Order = SortOrder.Descending });
-            
+
             SortDropdown.ItemsSource = _sortItems;
-            
+
             // Select saved sort preference
             var savedSortIndex = _sortItems.FindIndex(s => s.Sort == _currentSort && s.Order == _currentSortOrder);
             SortDropdown.SelectedIndex = savedSortIndex >= 0 ? savedSortIndex : 0;
@@ -133,7 +133,7 @@ namespace HyTaLauncher
             BrowseTitle.Text = _localization.Get("mods.browse");
             StatusText.Text = _localization.Get("mods.ready");
             ModpackLabel.Text = _localization.Get("modpack.label");
-            
+
             // Update filter dropdown labels if needed
             if (_categoryItems.Count > 0)
             {
@@ -143,7 +143,7 @@ namespace HyTaLauncher
             {
                 _gameVersionItems[0].DisplayName = _localization.Get("mods.filter.all_versions");
             }
-            
+
             // Update modpack dropdown default item
             if (_modpackItems.Count > 0)
             {
@@ -154,16 +154,16 @@ namespace HyTaLauncher
         private async Task LoadInstalledModsAsync()
         {
             StatusText.Text = _localization.Get("mods.loading");
-            
+
             _allInstalledMods = await _modService.GetInstalledModsAsync();
-            
+
             // Apply tag filter if selected
-            var displayMods = _selectedTagId != null 
+            var displayMods = _selectedTagId != null
                 ? _tagService.FilterByTag(_allInstalledMods, _selectedTagId)
                 : _allInstalledMods;
-            
+
             InstalledModsList.ItemsSource = displayMods;
-            
+
             ModsCountText.Text = string.Format(_localization.Get("mods.count"), _allInstalledMods.Count);
             StatusText.Text = _localization.Get("mods.ready");
         }
@@ -171,13 +171,13 @@ namespace HyTaLauncher
         private async Task LoadPopularModsAsync()
         {
             var mods = await _modService.GetPopularModsAsync(_currentFilters, _currentSort, _currentSortOrder, _currentPage, PAGE_SIZE);
-            
+
             // Apply client-side release type filter if needed
             if (_currentFilters.ReleaseType.HasValue)
             {
                 mods = _modService.FilterByReleaseType(mods, _currentFilters.ReleaseType.Value);
             }
-            
+
             SearchResultsList.ItemsSource = mods;
             UpdatePagination(mods.Count);
         }
@@ -185,7 +185,7 @@ namespace HyTaLauncher
         private async Task SearchModsAsync(string query)
         {
             _currentSearchQuery = query;
-            
+
             if (string.IsNullOrWhiteSpace(query))
             {
                 await LoadPopularModsAsync();
@@ -194,25 +194,25 @@ namespace HyTaLauncher
 
             StatusText.Text = _localization.Get("mods.searching");
             var results = await _modService.SearchModsAsync(query, _currentFilters, _currentSort, _currentSortOrder, _currentPage, PAGE_SIZE);
-            
+
             // Apply client-side release type filter if needed
             if (_currentFilters.ReleaseType.HasValue)
             {
                 results = _modService.FilterByReleaseType(results, _currentFilters.ReleaseType.Value);
             }
-            
+
             SearchResultsList.ItemsSource = results;
             StatusText.Text = string.Format(_localization.Get("mods.found"), results.Count);
             UpdatePagination(results.Count);
         }
-        
+
         private void UpdatePagination(int resultsCount)
         {
             PageText.Text = $"Page {_currentPage + 1}";
             PrevPageBtn.IsEnabled = _currentPage > 0;
             NextPageBtn.IsEnabled = resultsCount >= PAGE_SIZE;
         }
-        
+
         private async void PrevPage_Click(object sender, RoutedEventArgs e)
         {
             if (_currentPage > 0)
@@ -221,13 +221,13 @@ namespace HyTaLauncher
                 await LoadCurrentPageAsync();
             }
         }
-        
+
         private async void NextPage_Click(object sender, RoutedEventArgs e)
         {
             _currentPage++;
             await LoadCurrentPageAsync();
         }
-        
+
         private async Task LoadCurrentPageAsync()
         {
             if (string.IsNullOrWhiteSpace(_currentSearchQuery))
@@ -239,7 +239,7 @@ namespace HyTaLauncher
                 await SearchModsAsync(_currentSearchQuery);
             }
         }
-        
+
         // Filter event handlers
         private async void CategoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -250,7 +250,7 @@ namespace HyTaLauncher
                 await LoadCurrentPageAsync();
             }
         }
-        
+
         private async void GameVersionFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (GameVersionFilter.SelectedItem is FilterItem item)
@@ -260,7 +260,7 @@ namespace HyTaLauncher
                 await LoadCurrentPageAsync();
             }
         }
-        
+
         private async void ClearFilters_Click(object sender, RoutedEventArgs e)
         {
             // Reset all filters
@@ -270,7 +270,7 @@ namespace HyTaLauncher
             _currentPage = 0;
             await LoadCurrentPageAsync();
         }
-        
+
         // Sort event handler
         private async void SortDropdown_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -279,13 +279,13 @@ namespace HyTaLauncher
                 _currentSort = item.Sort;
                 _currentSortOrder = item.Order;
                 _currentPage = 0;
-                
+
                 // Persist sort preference
                 var settings = _settingsManager.Load();
                 settings.ModsSortOption = (int)_currentSort;
                 settings.ModsSortOrder = (int)_currentSortOrder;
                 _settingsManager.Save(settings);
-                
+
                 await LoadCurrentPageAsync();
             }
         }
@@ -296,7 +296,7 @@ namespace HyTaLauncher
             {
                 var url = image.Tag as string;
                 LogService.LogModsVerbose($"ModIcon_Loaded: Tag={url ?? "null"}");
-                
+
                 if (!string.IsNullOrEmpty(url))
                 {
                     var bitmap = await ImageCacheService.GetImageAsync(url);
@@ -334,17 +334,17 @@ namespace HyTaLauncher
             StatusText.Text = _localization.Get("mods.checking_updates");
             ProgressBar.Visibility = Visibility.Visible;
             ProgressBar.IsIndeterminate = true;
-            
+
             var mods = await _modService.GetInstalledModsAsync();
             mods = await _modService.CheckForUpdatesAsync(mods);
-            
+
             InstalledModsList.ItemsSource = mods;
-            
+
             var updatesCount = mods.Count(m => m.HasUpdate);
-            StatusText.Text = updatesCount > 0 
+            StatusText.Text = updatesCount > 0
                 ? string.Format(_localization.Get("mods.updates_available"), updatesCount)
                 : _localization.Get("mods.no_updates");
-            
+
             ProgressBar.IsIndeterminate = false;
             ProgressBar.Visibility = Visibility.Collapsed;
         }
@@ -355,14 +355,14 @@ namespace HyTaLauncher
             {
                 element.IsEnabled = false;
                 ProgressBar.Visibility = Visibility.Visible;
-                
+
                 StatusText.Text = string.Format(_localization.Get("mods.updating"), mod.DisplayName);
-                
+
                 var success = await _modService.UpdateModAsync(mod);
-                
+
                 ProgressBar.Visibility = Visibility.Collapsed;
                 element.IsEnabled = true;
-                
+
                 if (success)
                 {
                     StatusText.Text = string.Format(_localization.Get("mods.updated"), mod.DisplayName);
@@ -401,19 +401,19 @@ namespace HyTaLauncher
             {
                 element.IsEnabled = false;
                 ProgressBar.Visibility = Visibility.Visible;
-                
+
                 // Determine target folder based on selected modpack
                 string? targetFolder = null;
                 if (_selectedModpackId != null)
                 {
                     targetFolder = _modpackService.GetModpackModsPath(_selectedModpackId);
                 }
-                
+
                 var success = await _modService.InstallModAsync(mod, targetFolder);
-                
+
                 ProgressBar.Visibility = Visibility.Collapsed;
                 element.IsEnabled = true;
-                
+
                 if (success)
                 {
                     await LoadInstalledModsForCurrentModpackAsync();
@@ -458,9 +458,9 @@ namespace HyTaLauncher
                 StatusText.Text = status;
             });
         }
-        
+
         // Tag management methods
-        
+
         private void OnTagsChanged()
         {
             Dispatcher.Invoke(() =>
@@ -469,41 +469,41 @@ namespace HyTaLauncher
                 ApplyTagFilter();
             });
         }
-        
+
         private void RefreshTagFilterPanel()
         {
             var tags = _tagService.GetAllTags();
             TagFilterList.ItemsSource = tags;
-            
+
             // Show/hide tag filter panel based on whether there are tags
             TagFilterPanel.Visibility = tags.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-            
+
             // Update "All" chip text
             AllTagsText.Text = _localization.Get("mods.tags.all");
-            
+
             // Update "All" chip selection state
             UpdateTagChipSelection();
         }
-        
+
         private void UpdateTagChipSelection()
         {
             // Update "All" chip appearance
-            AllTagsChip.Background = _selectedTagId == null 
-                ? (Brush)FindResource("AccentBrush") 
+            AllTagsChip.Background = _selectedTagId == null
+                ? (Brush)FindResource("AccentBrush")
                 : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3d444d"));
         }
-        
+
         private void ApplyTagFilter()
         {
             if (_allInstalledMods == null || _allInstalledMods.Count == 0)
                 return;
-                
-            var displayMods = _selectedTagId != null 
+
+            var displayMods = _selectedTagId != null
                 ? _tagService.FilterByTag(_allInstalledMods, _selectedTagId)
                 : _allInstalledMods;
-            
+
             InstalledModsList.ItemsSource = displayMods;
-            
+
             // Update checkbox visibility for filtered items
             Dispatcher.InvokeAsync(() =>
             {
@@ -514,14 +514,14 @@ namespace HyTaLauncher
                 }
             }, System.Windows.Threading.DispatcherPriority.Background);
         }
-        
+
         private void AllTagsChip_Click(object sender, MouseButtonEventArgs e)
         {
             _selectedTagId = null;
             UpdateTagChipSelection();
             ApplyTagFilter();
         }
-        
+
         private void TagChip_Click(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.Tag is ModTag tag)
@@ -531,33 +531,33 @@ namespace HyTaLauncher
                 ApplyTagFilter();
             }
         }
-        
+
         private void InstalledMod_RightClick(object sender, MouseButtonEventArgs e)
         {
             // Context menu will be shown automatically
         }
-        
+
         private void ModContextMenu_Opened(object sender, RoutedEventArgs e)
         {
             if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is FrameworkElement element)
             {
                 var mod = element.Tag as InstalledMod;
                 if (mod == null) return;
-                
+
                 // Find menu items
                 var addTagMenuItem = contextMenu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Header?.ToString() == _localization.Get("mods.tags.add") || m.Header?.ToString() == "Add Tag");
                 var removeTagMenuItem = contextMenu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Header?.ToString() == _localization.Get("mods.tags.remove") || m.Header?.ToString() == "Remove Tag");
                 var createTagMenuItem = contextMenu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Header?.ToString()?.Contains("Create") == true || m.Header?.ToString()?.Contains("New") == true);
-                
+
                 // Update headers with localized text
                 if (addTagMenuItem != null)
                 {
                     addTagMenuItem.Header = _localization.Get("mods.tags.add");
                     addTagMenuItem.Items.Clear();
-                    
+
                     var allTags = _tagService.GetAllTags();
                     var modTags = _tagService.GetTagsForMod(mod.FileName);
-                    
+
                     // Add tags that are not already assigned
                     foreach (var tag in allTags.Where(t => !modTags.Contains(t.Id)))
                     {
@@ -577,19 +577,19 @@ namespace HyTaLauncher
                         tagItem.Click += AddTagToMod_Click;
                         addTagMenuItem.Items.Add(tagItem);
                     }
-                    
+
                     // Disable if no tags available to add
                     addTagMenuItem.IsEnabled = addTagMenuItem.Items.Count > 0;
                 }
-                
+
                 if (removeTagMenuItem != null)
                 {
                     removeTagMenuItem.Header = _localization.Get("mods.tags.remove");
                     removeTagMenuItem.Items.Clear();
-                    
+
                     var modTagIds = _tagService.GetTagsForMod(mod.FileName);
                     var modTags = _tagService.GetTagObjectsForMod(mod.FileName);
-                    
+
                     // Add tags that are assigned to this mod
                     foreach (var tag in modTags)
                     {
@@ -609,11 +609,11 @@ namespace HyTaLauncher
                         tagItem.Click += RemoveTagFromMod_Click;
                         removeTagMenuItem.Items.Add(tagItem);
                     }
-                    
+
                     // Disable if no tags to remove
                     removeTagMenuItem.IsEnabled = removeTagMenuItem.Items.Count > 0;
                 }
-                
+
                 if (createTagMenuItem != null)
                 {
                     createTagMenuItem.Header = _localization.Get("mods.tags.create");
@@ -621,7 +621,7 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         private void AddTagToMod_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.Tag is TagActionData data)
@@ -630,7 +630,7 @@ namespace HyTaLauncher
                 StatusText.Text = string.Format(_localization.Get("mods.tags.added_to_mod"), data.Mod.DisplayName);
             }
         }
-        
+
         private void RemoveTagFromMod_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.Tag is TagActionData data)
@@ -639,11 +639,11 @@ namespace HyTaLauncher
                 StatusText.Text = string.Format(_localization.Get("mods.tags.removed_from_mod"), data.Mod.DisplayName);
             }
         }
-        
+
         private void CreateNewTag_Click(object sender, RoutedEventArgs e)
         {
             var mod = (sender as FrameworkElement)?.Tag as InstalledMod;
-            
+
             // Show a simple input dialog for tag name
             var dialog = new Window
             {
@@ -656,7 +656,7 @@ namespace HyTaLauncher
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = this
             };
-            
+
             var border = new Border
             {
                 Background = (Brush)FindResource("CardBackgroundBrush"),
@@ -665,13 +665,13 @@ namespace HyTaLauncher
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(20)
             };
-            
+
             var grid = new Grid();
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            
+
             var titleText = new TextBlock
             {
                 Text = _localization.Get("mods.tags.create_title"),
@@ -681,7 +681,7 @@ namespace HyTaLauncher
                 Margin = new Thickness(0, 0, 0, 15)
             };
             Grid.SetRow(titleText, 0);
-            
+
             var nameBox = new TextBox
             {
                 Style = (Style)FindResource("ModernTextBox"),
@@ -689,7 +689,7 @@ namespace HyTaLauncher
                 FontSize = 12
             };
             Grid.SetRow(nameBox, 1);
-            
+
             // Color picker (simple predefined colors)
             var colorPanel = new StackPanel
             {
@@ -697,11 +697,11 @@ namespace HyTaLauncher
                 Margin = new Thickness(0, 10, 0, 15)
             };
             Grid.SetRow(colorPanel, 2);
-            
+
             var colors = new[] { "#4CAF50", "#2196F3", "#FF9800", "#E91E63", "#9C27B0", "#00BCD4", "#FF5722", "#607D8B" };
             string selectedColor = colors[0];
             Border? selectedColorBorder = null;
-            
+
             foreach (var color in colors)
             {
                 var colorBorder = new Border
@@ -716,33 +716,33 @@ namespace HyTaLauncher
                     BorderBrush = Brushes.Transparent,
                     Tag = color
                 };
-                
+
                 if (color == selectedColor)
                 {
                     colorBorder.BorderBrush = Brushes.White;
                     selectedColorBorder = colorBorder;
                 }
-                
+
                 colorBorder.MouseLeftButtonDown += (s, args) =>
                 {
                     if (selectedColorBorder != null)
                         selectedColorBorder.BorderBrush = Brushes.Transparent;
-                    
+
                     selectedColor = (string)((Border)s).Tag;
                     ((Border)s).BorderBrush = Brushes.White;
                     selectedColorBorder = (Border)s;
                 };
-                
+
                 colorPanel.Children.Add(colorBorder);
             }
-            
+
             var buttonPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right
             };
             Grid.SetRow(buttonPanel, 3);
-            
+
             var cancelBtn = new Button
             {
                 Content = _localization.Get("settings.cancel"),
@@ -752,7 +752,7 @@ namespace HyTaLauncher
                 Margin = new Thickness(0, 0, 8, 0)
             };
             cancelBtn.Click += (s, args) => dialog.Close();
-            
+
             var createBtn = new Button
             {
                 Content = _localization.Get("mods.tags.create_title"),
@@ -765,63 +765,63 @@ namespace HyTaLauncher
                 if (!string.IsNullOrEmpty(tagName))
                 {
                     var newTag = _tagService.CreateTag(tagName, selectedColor);
-                    
+
                     // If a mod was selected, assign the new tag to it
                     if (mod != null)
                     {
                         _tagService.AssignTag(mod.FileName, newTag.Id);
                     }
-                    
+
                     dialog.Close();
                     StatusText.Text = string.Format(_localization.Get("mods.tags.created"), tagName);
                 }
             };
-            
+
             buttonPanel.Children.Add(cancelBtn);
             buttonPanel.Children.Add(createBtn);
-            
+
             grid.Children.Add(titleText);
             grid.Children.Add(nameBox);
             grid.Children.Add(colorPanel);
             grid.Children.Add(buttonPanel);
-            
+
             border.Child = grid;
             dialog.Content = border;
-            
+
             dialog.ShowDialog();
         }
-        
+
         // Modpack management methods
-        
+
         private void InitializeModpackDropdown()
         {
             RefreshModpackDropdown();
-            
+
             // Select saved modpack
             var selectedId = _modpackService.GetSelectedModpackId();
             _selectedModpackId = selectedId;
-            
+
             var selectedIndex = _modpackItems.FindIndex(m => m.ModpackId == selectedId);
             ModpackSelector.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
-            
+
             UpdateModpackButtonStates();
         }
-        
+
         private void RefreshModpackDropdown()
         {
             _modpackItems.Clear();
             _modpackItems.Add(new ModpackItem { DisplayName = _localization.Get("modpack.default"), ModpackId = null });
-            
+
             foreach (var modpack in _modpackService.GetAllModpacks())
             {
                 _modpackItems.Add(new ModpackItem { DisplayName = modpack.Name, ModpackId = modpack.Id });
             }
-            
+
             ModpackSelector.DisplayMemberPath = "DisplayName";
             ModpackSelector.ItemsSource = null;
             ModpackSelector.ItemsSource = _modpackItems;
         }
-        
+
         private void UpdateModpackButtonStates()
         {
             var hasModpackSelected = _selectedModpackId != null;
@@ -829,15 +829,15 @@ namespace HyTaLauncher
             DeleteModpackBtn.IsEnabled = hasModpackSelected;
             ExportModpackBtn.IsEnabled = hasModpackSelected;
         }
-        
+
         private void OnModpacksChanged()
         {
             if (_isModpackOperationInProgress) return;
-            
+
             Dispatcher.Invoke(() =>
             {
                 RefreshModpackDropdown();
-                
+
                 // Re-select current modpack if it still exists
                 var selectedIndex = _modpackItems.FindIndex(m => m.ModpackId == _selectedModpackId);
                 if (selectedIndex < 0)
@@ -846,11 +846,11 @@ namespace HyTaLauncher
                     selectedIndex = 0;
                 }
                 ModpackSelector.SelectedIndex = selectedIndex;
-                
+
                 UpdateModpackButtonStates();
             });
         }
-        
+
         private async void ModpackSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ModpackSelector.SelectedItem is ModpackItem item)
@@ -858,16 +858,16 @@ namespace HyTaLauncher
                 _selectedModpackId = item.ModpackId;
                 _modpackService.SetSelectedModpack(_selectedModpackId);
                 UpdateModpackButtonStates();
-                
+
                 // Reload installed mods for the selected modpack
                 await LoadInstalledModsForCurrentModpackAsync();
             }
         }
-        
+
         private async Task LoadInstalledModsForCurrentModpackAsync()
         {
             StatusText.Text = _localization.Get("mods.loading");
-            
+
             if (_selectedModpackId != null)
             {
                 // Load mods from modpack directory
@@ -878,19 +878,19 @@ namespace HyTaLauncher
                 // Load mods from default directory
                 _allInstalledMods = await _modService.GetInstalledModsAsync();
             }
-            
+
             // Apply tag filter if selected
-            var displayMods = _selectedTagId != null 
+            var displayMods = _selectedTagId != null
                 ? _tagService.FilterByTag(_allInstalledMods, _selectedTagId)
                 : _allInstalledMods;
-            
+
             InstalledModsList.ItemsSource = displayMods;
-            
+
             ModsCountText.Text = string.Format(_localization.Get("mods.count"), _allInstalledMods.Count);
             StatusText.Text = _localization.Get("mods.ready");
-            
+
             // Update checkbox visibility for newly loaded items
-            Dispatcher.InvokeAsync(() =>
+            _ = Dispatcher.InvokeAsync(() =>
             {
                 foreach (var item in InstalledModsList.Items)
                 {
@@ -898,38 +898,40 @@ namespace HyTaLauncher
                     UpdateModItemCheckboxVisibility(container as FrameworkElement);
                 }
             }, System.Windows.Threading.DispatcherPriority.Background);
-            
-            // Load icons in background
-            _ = LoadModIconsAsync(_allInstalledMods);
+
+            // Load icons in background (fire-and-forget)
+#pragma warning disable CS4014
+            LoadModIconsAsync(_allInstalledMods);
+#pragma warning restore CS4014
         }
-        
+
         private async Task LoadModIconsAsync(List<InstalledMod> mods)
         {
             var modsWithoutIcons = mods.Where(m => string.IsNullOrEmpty(m.IconUrl) && m.Manifest != null && !string.IsNullOrEmpty(m.Manifest.Name)).ToList();
-            
+
             if (modsWithoutIcons.Count == 0)
             {
                 LogService.LogModsVerbose("All mods have icons, skipping API search");
                 return;
             }
-            
+
             LogService.LogModsVerbose($"Loading icons for {modsWithoutIcons.Count} mods without cached icons");
-            
+
             foreach (var mod in modsWithoutIcons)
             {
                 try
                 {
                     LogService.LogModsVerbose($"Searching icon for: {mod.Manifest!.Name}");
                     var searchResults = await _modService.SearchModsAsync(mod.Manifest.Name, null, SortOption.Popularity, SortOrder.Descending, 0, 3);
-                    var match = searchResults.FirstOrDefault(r => 
+                    var match = searchResults.FirstOrDefault(r =>
                         r.Name.Equals(mod.Manifest.Name, StringComparison.OrdinalIgnoreCase) ||
                         r.Slug.Equals(mod.Manifest.Name, StringComparison.OrdinalIgnoreCase));
-                    
+
                     if (match != null && !string.IsNullOrEmpty(match.ThumbnailUrl))
                     {
                         mod.IconUrl = match.ThumbnailUrl;
                         LogService.LogModsVerbose($"Found icon for {mod.Manifest.Name}: {mod.IconUrl}");
-                        
+
                         // Save icon URL to .icons folder for future use
                         var modsFolder = Path.GetDirectoryName(mod.FilePath);
                         if (!string.IsNullOrEmpty(modsFolder))
@@ -943,7 +945,7 @@ namespace HyTaLauncher
                             }
                             catch { }
                         }
-                        
+
                         // Pre-load the image into cache
                         await ImageCacheService.GetImageAsync(mod.IconUrl);
                     }
@@ -957,14 +959,14 @@ namespace HyTaLauncher
                     LogService.LogModsVerbose($"Error loading icon for {mod.Manifest!.Name}: {ex.Message}");
                 }
             }
-            
+
             // Refresh the list after icons loaded
             if (modsWithoutIcons.Any(m => !string.IsNullOrEmpty(m.IconUrl)))
             {
                 LogService.LogModsVerbose("Refreshing installed mods list with new icons");
                 Dispatcher.Invoke(() =>
                 {
-                    var displayMods = _selectedTagId != null 
+                    var displayMods = _selectedTagId != null
                         ? _tagService.FilterByTag(_allInstalledMods, _selectedTagId)
                         : _allInstalledMods;
                     InstalledModsList.ItemsSource = null;
@@ -972,31 +974,31 @@ namespace HyTaLauncher
                 });
             }
         }
-        
+
         private async void CreateModpack_Click(object sender, RoutedEventArgs e)
         {
             // Get mods from default directory for selection
             var defaultMods = await _modService.GetInstalledModsAsync();
-            
+
             var dialog = new CreateModpackDialog(_localization, defaultMods)
             {
                 Owner = this
             };
-            
+
             dialog.ShowDialog();
-            
+
             if (dialog.DialogResult)
             {
                 try
                 {
                     _isModpackOperationInProgress = true;
-                    
+
                     var modpack = _modpackService.CreateModpack(dialog.ModpackName!, dialog.SelectedModPaths);
                     StatusText.Text = string.Format(_localization.Get("modpack.created"), modpack.Name);
-                    
+
                     // Set selected modpack ID before refreshing dropdown
                     _selectedModpackId = modpack.Id;
-                    
+
                     // Select the newly created modpack
                     RefreshModpackDropdown();
                     var newIndex = _modpackItems.FindIndex(m => m.ModpackId == modpack.Id);
@@ -1004,9 +1006,9 @@ namespace HyTaLauncher
                     {
                         ModpackSelector.SelectedIndex = newIndex;
                     }
-                    
+
                     _isModpackOperationInProgress = false;
-                    
+
                     UpdateModpackButtonStates();
                     await LoadInstalledModsForCurrentModpackAsync();
                 }
@@ -1022,31 +1024,31 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         private async void EditModpack_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedModpackId == null) return;
-            
+
             var modpack = _modpackService.GetModpack(_selectedModpackId);
             if (modpack == null) return;
-            
+
             // Get mods from default directory for adding
             var defaultMods = await _modService.GetInstalledModsAsync();
-            
+
             var dialog = new EditModpackDialog(_localization, _modpackService, modpack, defaultMods)
             {
                 Owner = this
             };
-            
+
             dialog.ShowDialog();
-            
+
             if (dialog.DialogResult)
             {
                 if (dialog.NewModpackName != null)
                 {
                     StatusText.Text = string.Format(_localization.Get("modpack.renamed"), dialog.NewModpackName);
                     RefreshModpackDropdown();
-                    
+
                     // Re-select the modpack
                     var index = _modpackItems.FindIndex(m => m.ModpackId == _selectedModpackId);
                     if (index >= 0)
@@ -1054,40 +1056,40 @@ namespace HyTaLauncher
                         ModpackSelector.SelectedIndex = index;
                     }
                 }
-                
+
                 if (dialog.ModsChanged)
                 {
                     await LoadInstalledModsForCurrentModpackAsync();
                 }
             }
         }
-        
+
         private async void DeleteModpack_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedModpackId == null) return;
-            
+
             var modpack = _modpackService.GetModpack(_selectedModpackId);
             if (modpack == null) return;
-            
+
             var result = MessageBox.Show(
                 string.Format(_localization.Get("modpack.delete_confirm"), modpack.Name),
                 _localization.Get("modpack.delete_title"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning
             );
-            
+
             if (result == MessageBoxResult.Yes)
             {
                 try
                 {
                     _modpackService.DeleteModpack(_selectedModpackId);
                     StatusText.Text = string.Format(_localization.Get("modpack.deleted"), modpack.Name);
-                    
+
                     // Reset to default
                     _selectedModpackId = null;
                     RefreshModpackDropdown();
                     ModpackSelector.SelectedIndex = 0;
-                    
+
                     await LoadInstalledModsForCurrentModpackAsync();
                 }
                 catch (Exception ex)
@@ -1101,21 +1103,21 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         private async void ExportModpack_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedModpackId == null) return;
-            
+
             var modpack = _modpackService.GetModpack(_selectedModpackId);
             if (modpack == null) return;
-            
+
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
                 Title = _localization.Get("modpack.export_title"),
                 Filter = "ZIP files (*.zip)|*.zip",
                 FileName = $"{modpack.Name}.zip"
             };
-            
+
             if (dialog.ShowDialog() == true)
             {
                 try
@@ -1123,9 +1125,9 @@ namespace HyTaLauncher
                     ProgressBar.Visibility = Visibility.Visible;
                     ProgressBar.IsIndeterminate = true;
                     StatusText.Text = _localization.Get("modpack.exporting");
-                    
+
                     await _modpackService.ExportModpackAsync(_selectedModpackId, dialog.FileName);
-                    
+
                     ProgressBar.IsIndeterminate = false;
                     ProgressBar.Visibility = Visibility.Collapsed;
                     StatusText.Text = string.Format(_localization.Get("modpack.exported"), modpack.Name);
@@ -1134,7 +1136,7 @@ namespace HyTaLauncher
                 {
                     ProgressBar.IsIndeterminate = false;
                     ProgressBar.Visibility = Visibility.Collapsed;
-                    
+
                     MessageBox.Show(
                         ex.Message,
                         _localization.Get("error.title"),
@@ -1144,7 +1146,7 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         private async void ImportModpack_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
@@ -1152,7 +1154,7 @@ namespace HyTaLauncher
                 Title = _localization.Get("modpack.import_title"),
                 Filter = "ZIP files (*.zip)|*.zip"
             };
-            
+
             if (dialog.ShowDialog() == true)
             {
                 try
@@ -1160,16 +1162,16 @@ namespace HyTaLauncher
                     ProgressBar.Visibility = Visibility.Visible;
                     ProgressBar.IsIndeterminate = true;
                     StatusText.Text = _localization.Get("modpack.importing");
-                    
+
                     var modpack = await _modpackService.ImportModpackAsync(dialog.FileName);
-                    
+
                     ProgressBar.IsIndeterminate = false;
                     ProgressBar.Visibility = Visibility.Collapsed;
-                    
+
                     if (modpack != null)
                     {
                         StatusText.Text = string.Format(_localization.Get("modpack.imported"), modpack.Name);
-                        
+
                         // Select the imported modpack
                         RefreshModpackDropdown();
                         var newIndex = _modpackItems.FindIndex(m => m.ModpackId == modpack.Id);
@@ -1193,7 +1195,7 @@ namespace HyTaLauncher
                 {
                     ProgressBar.IsIndeterminate = false;
                     ProgressBar.Visibility = Visibility.Collapsed;
-                    
+
                     MessageBox.Show(
                         ex.Message,
                         _localization.Get("error.title"),
@@ -1203,28 +1205,28 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         // Multi-select methods
-        
+
         private void SelectMode_Click(object sender, RoutedEventArgs e)
         {
             _isSelectModeActive = !_isSelectModeActive;
             _selectedMods.Clear();
-            
+
             UpdateSelectModeUI();
         }
-        
+
         private void UpdateSelectModeUI()
         {
             // Update button appearance
-            SelectModeBtn.Background = _isSelectModeActive 
+            SelectModeBtn.Background = _isSelectModeActive
                 ? (Brush)FindResource("AccentBrush")
                 : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3d444d"));
-            
+
             // Show/hide checkboxes and related UI
             SelectAllCheckBox.Visibility = _isSelectModeActive ? Visibility.Visible : Visibility.Collapsed;
             DeleteSelectedBtn.Visibility = _isSelectModeActive && _selectedMods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-            
+
             // Update checkboxes in the list
             if (InstalledModsList.ItemsSource != null)
             {
@@ -1237,20 +1239,20 @@ namespace HyTaLauncher
                     }
                 }
             }
-            
+
             // Reset select all checkbox
             SelectAllCheckBox.IsChecked = false;
         }
-        
+
         private void UpdateModItemCheckboxVisibility(FrameworkElement? container)
         {
             if (container == null) return;
-            
+
             var checkbox = FindVisualChild<CheckBox>(container);
             if (checkbox != null)
             {
                 checkbox.Visibility = _isSelectModeActive ? Visibility.Visible : Visibility.Collapsed;
-                
+
                 // Update checked state based on selection
                 if (checkbox.Tag is InstalledMod mod)
                 {
@@ -1258,13 +1260,13 @@ namespace HyTaLauncher
                 }
             }
         }
-        
+
         private void SelectAllCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             var isChecked = SelectAllCheckBox.IsChecked == true;
-            
+
             _selectedMods.Clear();
-            
+
             if (isChecked && InstalledModsList.ItemsSource != null)
             {
                 foreach (var item in InstalledModsList.ItemsSource)
@@ -1275,7 +1277,7 @@ namespace HyTaLauncher
                     }
                 }
             }
-            
+
             // Update all checkboxes
             if (InstalledModsList.ItemsSource != null)
             {
@@ -1292,10 +1294,10 @@ namespace HyTaLauncher
                     }
                 }
             }
-            
+
             UpdateDeleteSelectedButtonVisibility();
         }
-        
+
         private void ModCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             if (sender is CheckBox checkbox && checkbox.Tag is InstalledMod mod)
@@ -1308,38 +1310,38 @@ namespace HyTaLauncher
                 {
                     _selectedMods.Remove(mod);
                 }
-                
+
                 // Update select all checkbox state
                 var totalMods = InstalledModsList.Items.Count;
                 SelectAllCheckBox.IsChecked = _selectedMods.Count == totalMods && totalMods > 0;
-                
+
                 UpdateDeleteSelectedButtonVisibility();
             }
         }
-        
+
         private void UpdateDeleteSelectedButtonVisibility()
         {
-            DeleteSelectedBtn.Visibility = _isSelectModeActive && _selectedMods.Count > 0 
-                ? Visibility.Visible 
+            DeleteSelectedBtn.Visibility = _isSelectModeActive && _selectedMods.Count > 0
+                ? Visibility.Visible
                 : Visibility.Collapsed;
         }
-        
+
         private async void DeleteSelected_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedMods.Count == 0) return;
-            
+
             var result = MessageBox.Show(
                 string.Format(_localization.Get("mods.delete_selected_confirm"), _selectedMods.Count),
                 _localization.Get("mods.delete_title"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question
             );
-            
+
             if (result == MessageBoxResult.Yes)
             {
                 var modsToDelete = _selectedMods.ToList();
                 var deletedCount = 0;
-                
+
                 foreach (var mod in modsToDelete)
                 {
                     if (_modService.DeleteMod(mod))
@@ -1347,41 +1349,41 @@ namespace HyTaLauncher
                         deletedCount++;
                     }
                 }
-                
+
                 StatusText.Text = string.Format(_localization.Get("mods.deleted_count"), deletedCount);
-                
+
                 _selectedMods.Clear();
                 _isSelectModeActive = false;
                 UpdateSelectModeUI();
-                
+
                 await LoadInstalledModsForCurrentModpackAsync();
             }
         }
-        
+
         private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
         {
             if (parent == null) return null;
-            
+
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
-                
+
                 if (child is T typedChild)
                 {
                     return typedChild;
                 }
-                
+
                 var result = FindVisualChild<T>(child);
                 if (result != null)
                 {
                     return result;
                 }
             }
-            
+
             return null;
         }
     }
-    
+
     /// <summary>
     /// Helper class for tag action data
     /// </summary>
@@ -1390,7 +1392,7 @@ namespace HyTaLauncher
         public InstalledMod Mod { get; set; } = null!;
         public string TagId { get; set; } = "";
     }
-    
+
     /// <summary>
     /// Helper class for filter dropdown items
     /// </summary>
@@ -1399,10 +1401,10 @@ namespace HyTaLauncher
         public string DisplayName { get; set; } = "";
         public int? Value { get; set; }
         public string? StringValue { get; set; }
-        
+
         public override string ToString() => DisplayName;
     }
-    
+
     /// <summary>
     /// Helper class for sort dropdown items
     /// </summary>
@@ -1411,10 +1413,10 @@ namespace HyTaLauncher
         public string DisplayName { get; set; } = "";
         public SortOption Sort { get; set; }
         public SortOrder Order { get; set; }
-        
+
         public override string ToString() => DisplayName;
     }
-    
+
     /// <summary>
     /// Helper class for modpack dropdown items
     /// </summary>
@@ -1422,7 +1424,7 @@ namespace HyTaLauncher
     {
         public string DisplayName { get; set; } = "";
         public string? ModpackId { get; set; }
-        
+
         public override string ToString() => DisplayName;
     }
 }

@@ -21,32 +21,32 @@
             </Grid.RowDefinitions>
 
             <!-- Title Bar -->
-            <Border Grid.Row="0" 
+            <Border Grid.Row="0"
                     Background="#08ffffff"
                     CornerRadius="12,12,0,0"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
-                    <StackPanel Orientation="Horizontal" 
+                    <StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Margin="12,0,0,0">
-                        <TextBlock Text="◆" 
-                                   FontSize="14" 
+                        <TextBlock Text="◆"
+                                   FontSize="14"
                                    Foreground="{StaticResource AccentBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
-                        <TextBlock Text="HyTaLauncher" 
+                        <TextBlock Text="HyTaLauncher"
                                    FontSize="12"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" 
+                    <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right">
-                        <Button Content="─" 
+                        <Button Content="─"
                                 Style="{StaticResource WindowControlButton}"
                                 Click="MinimizeButton_Click"/>
-                        <Button Content="✕" 
+                        <Button Content="✕"
                                 Style="{StaticResource CloseButton}"
                                 Click="CloseButton_Click"/>
                     </StackPanel>
@@ -75,7 +75,7 @@
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,0,0,10"/>
 
-                    <ScrollViewer Grid.Row="1" 
+                    <ScrollViewer Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl x:Name="NewsItemsControl">
@@ -100,7 +100,7 @@
                                                        Height="90"/>
                                             </Border>
 
-                                            <StackPanel Grid.Column="1" 
+                                            <StackPanel Grid.Column="1"
                                                         Margin="12,10">
                                                 <TextBlock Text="{Binding Title}"
                                                            FontSize="13"
@@ -145,13 +145,13 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center">
                                 <Image.Effect>
-                                    <DropShadowEffect Color="#2ea043" 
-                                                      BlurRadius="20" 
+                                    <DropShadowEffect Color="#2ea043"
+                                                      BlurRadius="20"
                                                       ShadowDepth="0"
                                                       Opacity="0.4"/>
                                 </Image.Effect>
                             </Image>
-                            
+
                             <!-- Text Logo (fallback если картинка не загрузилась) -->
                             <TextBlock x:Name="LogoText"
                                        Text="HYTALE"
@@ -161,8 +161,8 @@
                                        HorizontalAlignment="Center"
                                        Visibility="Collapsed">
                                 <TextBlock.Effect>
-                                    <DropShadowEffect Color="#2ea043" 
-                                                      BlurRadius="20" 
+                                    <DropShadowEffect Color="#2ea043"
+                                                      BlurRadius="20"
                                                       ShadowDepth="0"
                                                       Opacity="0.4"/>
                                 </TextBlock.Effect>
@@ -171,7 +171,7 @@
 
                         <!-- Form -->
                         <StackPanel Grid.Row="1" VerticalAlignment="Top">
-                            
+
                             <!-- Nickname -->
                             <TextBlock x:Name="NicknameLabel"
                                        Text="NICKNAME"
@@ -214,7 +214,7 @@
                                         FontSize="14"
                                         Click="RefreshVersions_Click"/>
                             </Grid>
-                            
+
                             <!-- Branch -->
                             <TextBlock x:Name="BranchLabel"
                                        Text="BRANCH"
@@ -234,7 +234,7 @@
                                 <ComboBoxItem Content="beta"/>
                                 <ComboBoxItem Content="alpha"/>
                             </ComboBox>
-                            
+
                             <!-- Modpack -->
                             <TextBlock x:Name="ModpackLabel"
                                        Text="MODPACK"
@@ -267,7 +267,7 @@
                             </Grid>
 
                             <!-- Progress -->
-                            <StackPanel x:Name="ProgressPanel" 
+                            <StackPanel x:Name="ProgressPanel"
                                         Visibility="Collapsed"
                                         Margin="0,0,0,15">
                                 <TextBlock x:Name="StatusText"
@@ -279,12 +279,47 @@
                                              Style="{StaticResource ModernProgressBar}"
                                              Value="0"
                                              Maximum="100"/>
-                                <TextBlock x:Name="ProgressPercent"
-                                           Text="0%"
-                                           FontSize="10"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           HorizontalAlignment="Right"
-                                           Margin="0,4,0,0"/>
+                                <Grid Margin="0,4,0,0">
+                                    <TextBlock x:Name="ProgressPercent"
+                                               Text="0%"
+                                               FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Left"/>
+                                    <Button x:Name="CancelButton"
+                                            Content="✕ Cancel"
+                                            FontSize="9"
+                                            Height="20"
+                                            Padding="8,0"
+                                            HorizontalAlignment="Right"
+                                            Background="#44ff5555"
+                                            Foreground="#ffcccc"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="CancelButton_Click"
+                                            Visibility="Collapsed">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="4"
+                                                                    Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                                  VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#66ff4444"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
                                 <TextBlock x:Name="VpnHintText"
                                            Text="If download is slow, try using VPN"
                                            FontSize="9"
@@ -322,7 +357,7 @@
                                         ToolTip="Reinstall"
                                         Visibility="Collapsed"/>
                             </Grid>
-                            
+
                             <!-- Start Server Button -->
                             <Button x:Name="StartServerButton"
                                     Style="{StaticResource ModernButton}"
@@ -351,7 +386,7 @@
                                       FontSize="11"
                                       Padding="8,6"
                                       SelectionChanged="LanguageComboBox_SelectionChanged"/>
-                            
+
                             <StackPanel Orientation="Horizontal"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center">
@@ -439,7 +474,7 @@
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        
+
                         <!-- Discord Button -->
                         <Border Background="{StaticResource CardBackgroundBrush}"
                                 CornerRadius="6"
@@ -474,7 +509,7 @@
                     <StackPanel Grid.Column="1"
                                 VerticalAlignment="Center">
                         <TextBlock x:Name="FooterText"
-                                   Text="HyTaLauncher v1.0.6 • Unofficial launcher"
+                                   Text="HyTaLauncher v1.0.7 • Unofficial launcher"
                                    FontSize="10"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    HorizontalAlignment="Center"

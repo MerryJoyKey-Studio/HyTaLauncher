@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace HyTaLauncher.Services
@@ -39,55 +40,98 @@ namespace HyTaLauncher.Services
         public long Size { get; set; }
     }
 
-    public class UpdateService
+    public class UpdateService : IDisposable
     {
         public event Action<double>? ProgressChanged;
         public event Action<string>? StatusChanged;
 
-        private readonly HttpClient _httpClient;
+        private readonly HttpRetryService _httpService;
+        private readonly HttpClient _apiClient;
+        private bool _disposed;
         private const string RepoOwner = "MerryJoyKey-Studio";
         private const string RepoName = "HyTaLauncher";
         private const string ApiUrl = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
 
-        public static string CurrentVersion => "1.0.6";
+        // Retry config for update downloads
+        private static readonly RetryConfig UpdateDownloadConfig = new()
+        {
+            MaxRetries = 3,
+            Timeout = TimeSpan.FromMinutes(15),
+            EnableResume = true,
+            InitialRetryDelay = TimeSpan.FromSeconds(2)
+        };
+
+        public static string CurrentVersion => "1.0.7";
 
         public UpdateService()
         {
-            _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "HyTaLauncher");
-            _httpClient.Timeout = TimeSpan.FromMinutes(10);
+            _httpService = new HttpRetryService(UpdateDownloadConfig);
+            _httpService.ProgressChanged += p => ProgressChanged?.Invoke(p);
+            _httpService.StatusChanged += s => StatusChanged?.Invoke(s);
+
+            _apiClient = new HttpClient();
+            _apiClient.DefaultRequestHeaders.Add("User-Agent", "HyTaLauncher");
+            _apiClient.Timeout = TimeSpan.FromSeconds(30);
         }
 
-        public async Task<UpdateInfo?> CheckForUpdatesAsync()
+        public async Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var json = await _httpClient.GetStringAsync(ApiUrl);
-                var release = JsonConvert.DeserializeObject<UpdateInfo>(json);
+            var maxRetries = 2;
 
-                if (release != null && IsNewerVersion(release.Version, CurrentVersion))
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
                 {
-                    return release;
+                    LogService.LogGameVerbose($"Checking for updates (attempt {attempt}/{maxRetries})");
+
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+                    var json = await _apiClient.GetStringAsync(ApiUrl, cts.Token);
+                    var release = JsonConvert.DeserializeObject<UpdateInfo>(json);
+
+                    if (release != null && IsNewerVersion(release.Version, CurrentVersion))
+                    {
+                        LogService.LogGame($"Update available: {release.Version}");
+                        return release;
+                    }
+
+                    LogService.LogGameVerbose("No updates available");
+                    return null;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw; // User cancelled
+                }
+                catch (Exception ex)
+                {
+                    LogService.LogGameVerbose($"Update check failed (attempt {attempt}): {ex.Message}");
+
+                    if (attempt < maxRetries)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    }
                 }
             }
-            catch
-            {
-                // Игнорируем ошибки проверки обновлений
-            }
 
+            LogService.LogGameVerbose("Update check failed after all retries");
             return null;
         }
 
         /// <summary>
         /// Скачивает и применяет обновление
         /// </summary>
-        public async Task<bool> DownloadAndApplyUpdateAsync(UpdateInfo update, LocalizationService localization)
+        public async Task<bool> DownloadAndApplyUpdateAsync(UpdateInfo update, LocalizationService localization, CancellationToken cancellationToken = default)
         {
             var downloadUrl = update.PortableDownloadUrl;
             if (string.IsNullOrEmpty(downloadUrl))
             {
                 throw new Exception("Portable version not found in release");
             }
+
+            // Get expected file size from release assets
+            var expectedSize = update.Assets
+                .FirstOrDefault(a => a.DownloadUrl == downloadUrl)?.Size ?? -1;
 
             var launcherDir = AppDomain.CurrentDomain.BaseDirectory;
             var tempDir = Path.Combine(Path.GetTempPath(), "HyTaLauncher_Update");
@@ -102,9 +146,24 @@ namespace HyTaLauncher.Services
                 Directory.CreateDirectory(tempDir);
                 Directory.CreateDirectory(extractDir);
 
-                // Скачиваем zip
+                // Скачиваем zip с поддержкой докачки и повторов
                 StatusChanged?.Invoke(localization.Get("update.downloading"));
-                await DownloadFileAsync(downloadUrl, zipPath);
+                LogService.LogGame($"Downloading update from: {downloadUrl}");
+
+                var downloadResult = await _httpService.DownloadFileAsync(
+                    downloadUrl,
+                    zipPath,
+                    UpdateDownloadConfig,
+                    expectedSize,
+                    cancellationToken: cancellationToken);
+
+                if (!downloadResult.Success)
+                {
+                    LogService.LogError($"Update download failed: {downloadResult.ErrorMessage}");
+                    throw new Exception($"Download failed: {downloadResult.ErrorMessage}");
+                }
+
+                LogService.LogGame($"Update downloaded: {downloadResult.BytesDownloaded} bytes, attempts: {downloadResult.AttemptsUsed}, resumed: {downloadResult.WasResumed}");
 
                 // Распаковываем
                 StatusChanged?.Invoke(localization.Get("update.extracting"));
@@ -122,7 +181,7 @@ namespace HyTaLauncher.Services
                 // Создаём PowerShell скрипт для обновления (менее подозрительный для AV)
                 StatusChanged?.Invoke(localization.Get("update.preparing"));
                 var updateScriptPath = Path.Combine(tempDir, "update.ps1");
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? 
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName ??
                     Path.Combine(launcherDir, "HyTaLauncher.exe");
 
                 // PowerShell скрипт вместо batch - меньше детектов
@@ -171,30 +230,17 @@ Start-Process -FilePath '{exePath.Replace("'", "''")}'
             }
         }
 
-        private async Task DownloadFileAsync(string url, string destPath)
+        /// <summary>
+        /// Safely deletes a file without throwing exceptions
+        /// </summary>
+        private static void SafeDeleteFile(string path)
         {
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            var totalBytes = response.Content.Headers.ContentLength ?? -1;
-            await using var contentStream = await response.Content.ReadAsStreamAsync();
-            await using var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            var buffer = new byte[81920];
-            int bytesRead;
-            long downloadedBytes = 0;
-
-            while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
+            try
             {
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                downloadedBytes += bytesRead;
-
-                if (totalBytes > 0)
-                {
-                    var progress = (double)downloadedBytes / totalBytes * 100;
-                    ProgressChanged?.Invoke(progress);
-                }
+                if (File.Exists(path))
+                    File.Delete(path);
             }
+            catch { }
         }
 
         private bool IsNewerVersion(string remote, string current)
@@ -219,6 +265,20 @@ Start-Process -FilePath '{exePath.Replace("'", "''")}'
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Disposes resources used by UpdateService
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _httpService.Dispose();
+                _apiClient.Dispose();
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
         }
     }
 }

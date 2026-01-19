@@ -17,9 +17,9 @@ namespace HyTaLauncher.Services
             var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             _langDir = Path.Combine(roaming, "HyTaLauncher", "languages");
             Directory.CreateDirectory(_langDir);
-            
+
             CreateDefaultLanguages();
-            
+
             // Определяем язык по умолчанию от системы Windows
             var defaultLang = GetSystemLanguage();
             LoadLanguage(defaultLang);
@@ -31,14 +31,14 @@ namespace HyTaLauncher.Services
         {
             var culture = CultureInfo.CurrentUICulture;
             var langCode = culture.TwoLetterISOLanguageName.ToLower();
-            
+
             // Проверяем, есть ли такой язык в доступных
             var langFile = Path.Combine(_langDir, $"{langCode}.json");
             if (File.Exists(langFile))
             {
                 return langCode;
             }
-            
+
             // Fallback на английский
             return "en";
         }
@@ -64,7 +64,7 @@ namespace HyTaLauncher.Services
                 try
                 {
                     var json = File.ReadAllText(langFile);
-                    _translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) 
+                    _translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(json)
                         ?? new Dictionary<string, string>();
                     _currentLanguage = language;
                     LanguageChanged?.Invoke();
@@ -97,7 +97,7 @@ namespace HyTaLauncher.Services
         private void MergeLanguageFile(string filePath, Dictionary<string, string> defaults)
         {
             Dictionary<string, string> existing = new();
-            
+
             if (File.Exists(filePath))
             {
                 try
@@ -139,12 +139,12 @@ namespace HyTaLauncher.Services
                 ["main.settings"] = "⚙ Settings",
                 ["main.mods"] = "Mods",
                 ["main.preparing"] = "Preparing...",
-                ["main.footer"] = "HyTaLauncher v1.0.6 • Unofficial launcher",
+                ["main.footer"] = "HyTaLauncher v1.0.7 • Unofficial launcher",
                 ["main.disclaimer"] = "This is a non-commercial fan project. After trying the game, please purchase it at",
                 ["main.versions_found"] = "Versions found: {0}",
                 ["main.latest"] = "Latest (latest)",
                 ["main.version_num"] = "Version {0}",
-                
+
                 ["error.title"] = "Error",
                 ["error.nickname_empty"] = "Please enter a nickname!",
                 ["error.nickname_length"] = "Nickname must be 3-16 characters!",
@@ -152,7 +152,7 @@ namespace HyTaLauncher.Services
                 ["error.launch"] = "Launch error: {0}",
                 ["error.corrupted_files"] = "Game files are corrupted. Please use the Reinstall button (🔄) to fix this issue.",
                 ["error.corrupted_reinstall"] = "Game files are corrupted or damaged.\n\nThis can happen after applying patches.\n\nReinstall the game now?",
-                
+
                 ["status.checking_java"] = "Checking Java...",
                 ["status.checking_game"] = "Checking game...",
                 ["status.launching"] = "Launching game...",
@@ -178,16 +178,16 @@ namespace HyTaLauncher.Services
                 ["status.reinstalling"] = "Removing old files...",
                 ["status.patch_failed_full"] = "Incremental patch failed, downloading full version...",
                 ["status.corrupted_retry_full"] = "Files corrupted, retrying with full installation...",
-                
+
                 ["main.reinstall"] = "Reinstall",
                 ["main.reinstall_confirm"] = "Reinstall the game?\n\nThis will delete the current installation and download the selected version again.\n\nYour saves and mods will NOT be affected.",
                 ["main.reinstall_title"] = "Reinstall Game",
-                
+
                 ["settings.title"] = "⚙ Settings",
                 ["settings.game_folder"] = "GAME FOLDER",
                 ["settings.api_key"] = "CURSEFORGE API KEY",
                 ["settings.api_key_hint"] = "Get your API key at console.curseforge.com",
-                ["settings.info"] = "HyTaLauncher v1.0.6",
+                ["settings.info"] = "HyTaLauncher v1.0.7",
                 ["settings.info_desc"] = "Unofficial launcher for Hytale",
                 ["settings.cancel"] = "Cancel",
                 ["settings.save"] = "Save",
@@ -216,14 +216,14 @@ namespace HyTaLauncher.Services
                 ["settings.restore_title"] = "Restore Backup",
                 ["settings.restore_confirm"] = "Restore original files from backup?\n\nThis will remove the installed mod/fix.",
                 ["settings.restore_done"] = "Restored for {0} version(s)!",
-                
+
                 ["main.start_server"] = "Start Server",
                 ["main.server_info_title"] = "Server Information",
                 ["main.server_info"] = "To play with friends you need:\n\n1. Install Radmin VPN or similar (for LAN play)\n2. All players must be on the same virtual network\n\nTo connect to yourself:\n- Online Play > Direct Connect > localhost\n\nFor others to connect:\n- Online Play > Direct Connect > Your IP address",
                 ["main.vpn_hint"] = "If download is slow or stuck, try using a VPN - this is a common issue with game servers.",
                 ["main.website"] = "Website",
                 ["main.discord"] = "Discord",
-                
+
                 ["update.available"] = "Update available!",
                 ["update.message"] = "New version {0} is available.\nCurrent version: {1}\n\nOpen download page?",
                 ["update.message_auto"] = "New version {0} is available.\nCurrent version: {1}\n\nYes - Update automatically\nNo - Open download page\nCancel - Skip",
@@ -234,7 +234,7 @@ namespace HyTaLauncher.Services
                 ["update.restarting"] = "The launcher will restart automatically.\n\nPlease wait...\n\nIf nothing happens within 10 seconds, download the update manually from GitHub.",
                 ["update.restarting_title"] = "Updating...",
                 ["update.error"] = "Update error: {0}",
-                
+
                 ["mods.title"] = "Mods Manager",
                 ["mods.installed"] = "INSTALLED MODS",
                 ["mods.browse"] = "CURSEFORGE",
@@ -256,7 +256,7 @@ namespace HyTaLauncher.Services
                 ["mods.updating"] = "Updating {0}...",
                 ["mods.updated"] = "{0} updated!",
                 ["mods.update_failed"] = "Update failed",
-                
+
                 // Filter labels
                 ["mods.filter.all_categories"] = "All Categories",
                 ["mods.filter.all_versions"] = "All Versions",
@@ -264,14 +264,14 @@ namespace HyTaLauncher.Services
                 ["mods.filter.release"] = "Release",
                 ["mods.filter.beta"] = "Beta",
                 ["mods.filter.alpha"] = "Alpha",
-                
+
                 // Sort option labels
                 ["mods.sort.popularity"] = "Popularity",
                 ["mods.sort.downloads"] = "Downloads",
                 ["mods.sort.updated"] = "Updated",
                 ["mods.sort.name_az"] = "Name A-Z",
                 ["mods.sort.name_za"] = "Name Z-A",
-                
+
                 // Tag management strings
                 ["mods.tags.all"] = "All",
                 ["mods.tags.add"] = "Add Tag",
@@ -281,7 +281,7 @@ namespace HyTaLauncher.Services
                 ["mods.tags.name_placeholder"] = "Tag name",
                 ["mods.tags.delete_confirm"] = "Delete tag \"{0}\"? It will be removed from all mods.",
                 ["mods.tags.delete_title"] = "Delete Tag",
-                
+
                 // Modpack management strings
                 ["modpack.label"] = "MODPACK",
                 ["modpack.default"] = "Default (No Modpack)",
@@ -308,17 +308,17 @@ namespace HyTaLauncher.Services
                 ["modpack.importing"] = "Importing modpack...",
                 ["modpack.imported"] = "Modpack \"{0}\" imported!",
                 ["modpack.import_failed"] = "Failed to import modpack. Invalid or corrupted file.",
-                
+
                 // Main window modpack strings
                 ["main.modpack"] = "MODPACK",
                 ["main.modpack_default"] = "Default",
                 ["main.manage_modpacks"] = "Manage Modpacks",
-                
+
                 // Tag status messages
                 ["mods.tags.created"] = "Tag \"{0}\" created",
                 ["mods.tags.added_to_mod"] = "Tag added to {0}",
                 ["mods.tags.removed_from_mod"] = "Tag removed from {0}",
-                
+
                 ["settings.logging"] = "LOGGING",
                 ["settings.verbose_logging"] = "Enable verbose logging",
                 ["settings.logging_hint"] = "Detailed logs help diagnose issues. Logs are saved to %AppData%\\HyTaLauncher\\logs",
@@ -331,7 +331,7 @@ namespace HyTaLauncher.Services
                 ["settings.advanced"] = "ADVANCED",
                 ["settings.advanced_btn"] = "Professional Mode",
                 ["settings.advanced_hint"] = "Custom launch arguments, open folders",
-                
+
                 ["advanced.title"] = "🔧 Advanced Settings",
                 ["advanced.game_args"] = "GAME LAUNCH ARGUMENTS",
                 ["advanced.game_args_hint"] = "Variables: {app-dir}, {java-exec}, {user-dir}, {uuid}, {name}",
@@ -346,7 +346,40 @@ namespace HyTaLauncher.Services
                 ["advanced.folder_mods"] = "Mods",
                 ["advanced.server_not_found"] = "Server not installed for this branch",
                 ["advanced.server_saved"] = "Server configuration saved!",
-                ["advanced.folder_not_exists"] = "Folder does not exist"
+                ["advanced.folder_not_exists"] = "Folder does not exist",
+
+                // SSL settings
+                ["settings.ssl"] = "SSL CERTIFICATE",
+                ["settings.bypass_ssl"] = "Bypass SSL validation",
+                ["settings.ssl_hint"] = "Enable only if you have SSL/certificate errors. May reduce security.",
+                ["settings.ssl_error_title"] = "SSL Error",
+                ["settings.ssl_error_message"] = "Could not establish a secure connection.\n\nThis may be caused by:\n- Antivirus/firewall blocking connections\n- Corporate proxy\n- Network issues\n\nWould you like to enable SSL bypass?",
+                ["settings.ssl_enable_bypass_hint"] = "SSL bypass has been enabled. Please try again.",
+                ["settings.ssl_bypass_enabled"] = "SSL bypass is enabled",
+
+                // Admin settings
+                ["settings.admin"] = "ADMINISTRATOR",
+                ["settings.run_game_admin"] = "Run game as administrator",
+                ["settings.run_server_admin"] = "Run server as administrator",
+                ["settings.run_launcher_admin"] = "Run launcher as administrator",
+                ["settings.restart_as_admin"] = "Restart as Administrator",
+                ["settings.admin_hint"] = "May help if the game has permission issues",
+                ["settings.running_as_admin"] = "Running as Administrator",
+                ["settings.running_as_user"] = "Running as User",
+                ["settings.admin_restart_failed"] = "Failed to restart as administrator",
+                ["settings.restart_admin_confirm"] = "The launcher needs to restart with administrator privileges.\n\nContinue?",
+
+                // Network/connection status
+                ["status.ssl_error"] = "SSL connection error",
+                ["status.connection_failed"] = "Connection failed",
+                ["status.retrying"] = "Retrying ({0}/{1})...",
+                ["status.retry_failed"] = "All retry attempts failed",
+                ["status.cancelling"] = "Cancelling...",
+
+                // Addon installation from local files
+                ["settings.onlinefix_not_supported"] = "Online fix is not supported on this platform",
+                ["settings.russifier_from_local"] = "Using local russifier file...",
+                ["settings.onlinefix_from_local"] = "Using local online fix file..."
             };
         }
 
@@ -363,12 +396,12 @@ namespace HyTaLauncher.Services
                 ["main.settings"] = "⚙ Настройки",
                 ["main.mods"] = "Моды",
                 ["main.preparing"] = "Подготовка...",
-                ["main.footer"] = "HyTaLauncher v1.0.6 • Неофициальный лаунчер",
+                ["main.footer"] = "HyTaLauncher v1.0.7 • Неофициальный лаунчер",
                 ["main.disclaimer"] = "Это некоммерческий фан-проект. После ознакомления приобретите игру на",
                 ["main.versions_found"] = "Найдено версий: {0}",
                 ["main.latest"] = "Последняя (latest)",
                 ["main.version_num"] = "Версия {0}",
-                
+
                 ["error.title"] = "Ошибка",
                 ["error.nickname_empty"] = "Пожалуйста, введите никнейм!",
                 ["error.nickname_length"] = "Никнейм должен быть от 3 до 16 символов!",
@@ -376,7 +409,7 @@ namespace HyTaLauncher.Services
                 ["error.launch"] = "Ошибка запуска: {0}",
                 ["error.corrupted_files"] = "Файлы игры повреждены. Используйте кнопку Переустановить (🔄) для исправления.",
                 ["error.corrupted_reinstall"] = "Файлы игры повреждены или испорчены.\n\nЭто может произойти после применения патчей.\n\nПереустановить игру сейчас?",
-                
+
                 ["status.checking_java"] = "Проверка Java...",
                 ["status.checking_game"] = "Проверка игры...",
                 ["status.launching"] = "Запуск игры...",
@@ -402,16 +435,16 @@ namespace HyTaLauncher.Services
                 ["status.reinstalling"] = "Удаление старых файлов...",
                 ["status.patch_failed_full"] = "Инкрементальный патч не сработал, скачиваем полную версию...",
                 ["status.corrupted_retry_full"] = "Файлы повреждены, повторная попытка с полной установкой...",
-                
+
                 ["main.reinstall"] = "Переустановить",
                 ["main.reinstall_confirm"] = "Переустановить игру?\n\nТекущая установка будет удалена и выбранная версия скачается заново.\n\nВаши сохранения и моды НЕ будут затронуты.",
                 ["main.reinstall_title"] = "Переустановка игры",
-                
+
                 ["settings.title"] = "⚙ Настройки",
                 ["settings.game_folder"] = "ПАПКА ИГРЫ",
                 ["settings.api_key"] = "CURSEFORGE API КЛЮЧ",
                 ["settings.api_key_hint"] = "Получите API ключ на console.curseforge.com",
-                ["settings.info"] = "HyTaLauncher v1.0.6",
+                ["settings.info"] = "HyTaLauncher v1.0.7",
                 ["settings.info_desc"] = "Неофициальный лаунчер для Hytale",
                 ["settings.cancel"] = "Отмена",
                 ["settings.save"] = "Сохранить",
@@ -440,14 +473,14 @@ namespace HyTaLauncher.Services
                 ["settings.restore_title"] = "Восстановление",
                 ["settings.restore_confirm"] = "Восстановить оригинальные файлы из бэкапа?\n\nЭто удалит установленный мод/фикс.",
                 ["settings.restore_done"] = "Восстановлено для {0} версий!",
-                
+
                 ["main.start_server"] = "Запустить сервер",
                 ["main.server_info_title"] = "Информация о сервере",
                 ["main.server_info"] = "Для игры с друзьями нужно:\n\n1. Установить Radmin VPN или аналог (для игры по локальной сети)\n2. Все игроки должны быть в одной виртуальной сети\n\nПодключиться к себе:\n- Онлайн игра > Прямое подключение > localhost\n\nЧтобы другие подключились:\n- Онлайн игра > Прямое подключение > Ваш IP адрес",
                 ["main.vpn_hint"] = "Если загрузка медленная или зависла, попробуйте использовать VPN - это частая проблема с серверами игры.",
                 ["main.website"] = "Сайт",
                 ["main.discord"] = "Discord",
-                
+
                 ["update.available"] = "Доступно обновление!",
                 ["update.message"] = "Доступна новая версия {0}.\nТекущая версия: {1}\n\nОткрыть страницу загрузки?",
                 ["update.message_auto"] = "Доступна новая версия {0}.\nТекущая версия: {1}\n\nДа - Обновить автоматически\nНет - Открыть страницу загрузки\nОтмена - Пропустить",
@@ -458,7 +491,7 @@ namespace HyTaLauncher.Services
                 ["update.restarting"] = "Лаунчер автоматически перезапустится.\n\nПожалуйста, подождите...\n\nЕсли ничего не произойдёт в течение 10 секунд, скачайте обновление вручную с GitHub.",
                 ["update.restarting_title"] = "Обновление...",
                 ["update.error"] = "Ошибка обновления: {0}",
-                
+
                 ["mods.title"] = "Менеджер модов",
                 ["mods.installed"] = "УСТАНОВЛЕННЫЕ МОДЫ",
                 ["mods.browse"] = "CURSEFORGE",
@@ -480,7 +513,7 @@ namespace HyTaLauncher.Services
                 ["mods.updating"] = "Обновление {0}...",
                 ["mods.updated"] = "{0} обновлён!",
                 ["mods.update_failed"] = "Ошибка обновления",
-                
+
                 // Filter labels
                 ["mods.filter.all_categories"] = "Все категории",
                 ["mods.filter.all_versions"] = "Все версии",
@@ -488,14 +521,14 @@ namespace HyTaLauncher.Services
                 ["mods.filter.release"] = "Релиз",
                 ["mods.filter.beta"] = "Бета",
                 ["mods.filter.alpha"] = "Альфа",
-                
+
                 // Sort option labels
                 ["mods.sort.popularity"] = "Популярность",
                 ["mods.sort.downloads"] = "Загрузки",
                 ["mods.sort.updated"] = "Обновлено",
                 ["mods.sort.name_az"] = "Имя А-Я",
                 ["mods.sort.name_za"] = "Имя Я-А",
-                
+
                 // Tag management strings
                 ["mods.tags.all"] = "Все",
                 ["mods.tags.add"] = "Добавить тег",
@@ -505,7 +538,7 @@ namespace HyTaLauncher.Services
                 ["mods.tags.name_placeholder"] = "Название тега",
                 ["mods.tags.delete_confirm"] = "Удалить тег \"{0}\"? Он будет удалён со всех модов.",
                 ["mods.tags.delete_title"] = "Удалить тег",
-                
+
                 // Modpack management strings
                 ["modpack.label"] = "МОДПАК",
                 ["modpack.default"] = "По умолчанию (без модпака)",
@@ -532,17 +565,17 @@ namespace HyTaLauncher.Services
                 ["modpack.importing"] = "Импорт модпака...",
                 ["modpack.imported"] = "Модпак \"{0}\" импортирован!",
                 ["modpack.import_failed"] = "Не удалось импортировать модпак. Файл повреждён или недействителен.",
-                
+
                 // Main window modpack strings
                 ["main.modpack"] = "МОДПАК",
                 ["main.modpack_default"] = "По умолчанию",
                 ["main.manage_modpacks"] = "Управление модпаками",
-                
+
                 // Tag status messages
                 ["mods.tags.created"] = "Тег \"{0}\" создан",
                 ["mods.tags.added_to_mod"] = "Тег добавлен к {0}",
                 ["mods.tags.removed_from_mod"] = "Тег удалён с {0}",
-                
+
                 ["settings.logging"] = "ЛОГИРОВАНИЕ",
                 ["settings.verbose_logging"] = "Включить подробные логи",
                 ["settings.logging_hint"] = "Подробные логи помогают диагностировать проблемы. Логи сохраняются в %AppData%\\HyTaLauncher\\logs",
@@ -555,7 +588,7 @@ namespace HyTaLauncher.Services
                 ["settings.advanced"] = "ДОПОЛНИТЕЛЬНО",
                 ["settings.advanced_btn"] = "Режим профессионала",
                 ["settings.advanced_hint"] = "Кастомные параметры запуска, открытие папок",
-                
+
                 ["advanced.title"] = "🔧 Расширенные настройки",
                 ["advanced.game_args"] = "ПАРАМЕТРЫ ЗАПУСКА ИГРЫ",
                 ["advanced.game_args_hint"] = "Переменные: {app-dir}, {java-exec}, {user-dir}, {uuid}, {name}",
@@ -570,7 +603,40 @@ namespace HyTaLauncher.Services
                 ["advanced.folder_mods"] = "Моды",
                 ["advanced.server_not_found"] = "Сервер не установлен для этой ветки",
                 ["advanced.server_saved"] = "Конфигурация сервера сохранена!",
-                ["advanced.folder_not_exists"] = "Папка не существует"
+                ["advanced.folder_not_exists"] = "Папка не существует",
+
+                // SSL settings
+                ["settings.ssl"] = "SSL СЕРТИФИКАТ",
+                ["settings.bypass_ssl"] = "Обойти проверку SSL",
+                ["settings.ssl_hint"] = "Включайте только при ошибках SSL/сертификата. Может снизить безопасность.",
+                ["settings.ssl_error_title"] = "Ошибка SSL",
+                ["settings.ssl_error_message"] = "Не удалось установить защищённое соединение.\n\nВозможные причины:\n- Антивирус/фаервол блокирует соединения\n- Корпоративный прокси\n- Проблемы с сетью\n\nВключить обход SSL?",
+                ["settings.ssl_enable_bypass_hint"] = "Обход SSL включён. Пожалуйста, попробуйте снова.",
+                ["settings.ssl_bypass_enabled"] = "Обход SSL включён",
+
+                // Admin settings
+                ["settings.admin"] = "АДМИНИСТРАТОР",
+                ["settings.run_game_admin"] = "Запускать игру от имени администратора",
+                ["settings.run_server_admin"] = "Запускать сервер от имени администратора",
+                ["settings.run_launcher_admin"] = "Запускать лаунчер от имени администратора",
+                ["settings.restart_as_admin"] = "Перезапустить от администратора",
+                ["settings.admin_hint"] = "Может помочь, если у игры проблемы с правами доступа",
+                ["settings.running_as_admin"] = "Запущено от администратора",
+                ["settings.running_as_user"] = "Запущено от пользователя",
+                ["settings.admin_restart_failed"] = "Не удалось перезапустить от администратора",
+                ["settings.restart_admin_confirm"] = "Лаунчер необходимо перезапустить с правами администратора.\n\nПродолжить?",
+
+                // Network/connection status
+                ["status.ssl_error"] = "Ошибка SSL соединения",
+                ["status.connection_failed"] = "Ошибка соединения",
+                ["status.retrying"] = "Повторная попытка ({0}/{1})...",
+                ["status.retry_failed"] = "Все попытки подключения неудачны",
+                ["status.cancelling"] = "Отмена...",
+
+                // Addon installation from local files
+                ["settings.onlinefix_not_supported"] = "Онлайн фикс не поддерживается на этой платформе",
+                ["settings.russifier_from_local"] = "Используется локальный файл русификатора...",
+                ["settings.onlinefix_from_local"] = "Используется локальный файл онлайн фикса..."
             };
         }
     }

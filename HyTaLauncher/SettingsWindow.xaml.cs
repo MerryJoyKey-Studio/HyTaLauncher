@@ -19,13 +19,13 @@ namespace HyTaLauncher
         public SettingsWindow(SettingsManager settingsManager, LocalizationService localization)
         {
             InitializeComponent();
-            
+
             // Применяем шрифт
             if (FontHelper.CurrentFont != null)
             {
                 FontFamily = FontHelper.CurrentFont;
             }
-            
+
             _settingsManager = settingsManager;
             _localization = localization;
             LoadSettings();
@@ -61,34 +61,67 @@ namespace HyTaLauncher
             AdvancedLabel.Text = _localization.Get("settings.advanced");
             AdvancedBtnText.Text = _localization.Get("settings.advanced_btn");
             AdvancedHintText.Text = _localization.Get("settings.advanced_hint");
+
+            // SSL settings
+            SslLabel.Text = _localization.Get("settings.ssl");
+            BypassSslText.Text = _localization.Get("settings.bypass_ssl");
+            SslHintText.Text = _localization.Get("settings.ssl_hint");
+
+            // Admin settings
+            AdminLabel.Text = _localization.Get("settings.admin");
+            RunGameAsAdminText.Text = _localization.Get("settings.run_game_admin");
+            RunServerAsAdminText.Text = _localization.Get("settings.run_server_admin");
+            RunLauncherAsAdminText.Text = _localization.Get("settings.run_launcher_admin");
+            RestartAsAdminBtnText.Text = _localization.Get("settings.restart_as_admin");
+            AdminHintText.Text = _localization.Get("settings.admin_hint");
+
+            // Update admin status
+            UpdateAdminStatus();
+        }
+
+        private void UpdateAdminStatus()
+        {
+            var isAdmin = AdminHelper.IsRunningAsAdmin();
+            AdminStatusText.Text = isAdmin
+                ? _localization.Get("settings.running_as_admin")
+                : _localization.Get("settings.running_as_user");
+            AdminStatusText.Foreground = isAdmin
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x4C, 0xAF, 0x50))
+                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x98, 0x00));
+
+            // Show restart button if launcher should run as admin but isn't
+            var settings = _settingsManager.Load();
+            RestartAsAdminBtn.Visibility = (settings.RunLauncherAsAdmin && !isAdmin)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private void CheckGameInstalled()
         {
             var gameDir = GetGameDirectory();
             var isInstalled = IsGameInstalled(gameDir);
-            
+
             RussifierBtn.IsEnabled = isInstalled;
-            
+
             // OnlineFix only available on Windows
             var isOnlineFixSupported = Services.PlatformHelper.IsOnlinefixSupported();
             OnlineFixBtn.IsEnabled = isInstalled && isOnlineFixSupported;
-            
-            RussifierStatusText.Text = isInstalled 
-                ? "" 
+
+            RussifierStatusText.Text = isInstalled
+                ? ""
                 : _localization.Get("settings.russifier_no_game");
-            
+
             if (!isOnlineFixSupported)
             {
                 OnlineFixStatusText.Text = _localization.Get("settings.onlinefix_not_supported");
             }
             else
             {
-                OnlineFixStatusText.Text = isInstalled 
-                    ? "" 
+                OnlineFixStatusText.Text = isInstalled
+                    ? ""
                     : _localization.Get("settings.onlinefix_no_game");
             }
-            
+
             // Проверяем наличие бэкапов
             CheckBackupsAvailable();
         }
@@ -99,10 +132,10 @@ namespace HyTaLauncher
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "HyTaLauncher", "backups"
             );
-            
-            RussifierRestoreBtn.Visibility = Directory.Exists(Path.Combine(backupDir, "russifier")) 
+
+            RussifierRestoreBtn.Visibility = Directory.Exists(Path.Combine(backupDir, "russifier"))
                 ? Visibility.Visible : Visibility.Collapsed;
-            OnlineFixRestoreBtn.Visibility = Directory.Exists(Path.Combine(backupDir, "onlinefix")) 
+            OnlineFixRestoreBtn.Visibility = Directory.Exists(Path.Combine(backupDir, "onlinefix"))
                 ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -145,7 +178,7 @@ namespace HyTaLauncher
         {
             var versionDirs = new List<string>();
             var installBase = Path.Combine(gameDir, "install");
-            
+
             if (!Directory.Exists(installBase))
                 return versionDirs;
 
@@ -168,31 +201,39 @@ namespace HyTaLauncher
         private void LoadSettings()
         {
             var settings = _settingsManager.Load();
-            
+
             var defaultDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Hytale"
             );
-            GameDirTextBox.Text = string.IsNullOrEmpty(settings.GameDirectory) 
-                ? defaultDir 
+            GameDirTextBox.Text = string.IsNullOrEmpty(settings.GameDirectory)
+                ? defaultDir
                 : settings.GameDirectory;
-            
+
             UseMirrorCheckBox.IsChecked = settings.UseMirror;
             MirrorWarningText.Visibility = settings.UseMirror ? Visibility.Visible : Visibility.Collapsed;
             VerboseLoggingCheckBox.IsChecked = settings.VerboseLogging;
             AlwaysFullDownloadCheckBox.IsChecked = settings.AlwaysFullDownload;
-            
+
             // Font
             FontComboBox.ItemsSource = FontHelper.AvailableFonts;
             var savedFont = string.IsNullOrEmpty(settings.FontName) ? "Inter" : settings.FontName;
             FontComboBox.SelectedItem = savedFont;
+
+            // Admin settings
+            RunGameAsAdminCheckBox.IsChecked = settings.RunGameAsAdmin;
+            RunServerAsAdminCheckBox.IsChecked = settings.RunServerAsAdmin;
+            RunLauncherAsAdminCheckBox.IsChecked = settings.RunLauncherAsAdmin;
+
+            // SSL settings
+            BypassSslCheckBox.IsChecked = settings.BypassSslValidation;
         }
 
         private void UseMirrorCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             var isChecked = UseMirrorCheckBox.IsChecked == true;
             MirrorWarningText.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
-            
+
             if (isChecked)
             {
                 MessageBox.Show(
@@ -238,6 +279,40 @@ namespace HyTaLauncher
             // Просто обновляем выбор, сохранение при нажатии Save
         }
 
+        private void RunLauncherAsAdminCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            var isChecked = RunLauncherAsAdminCheckBox.IsChecked == true;
+            var isAdmin = AdminHelper.IsRunningAsAdmin();
+
+            // Show restart button if checkbox is checked but not running as admin
+            RestartAsAdminBtn.Visibility = (isChecked && !isAdmin)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void RestartAsAdminButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Save settings first
+            var settings = _settingsManager.Load();
+            settings.RunLauncherAsAdmin = true;
+            _settingsManager.Save(settings);
+
+            // Try to restart as admin
+            if (AdminHelper.RestartAsAdmin())
+            {
+                System.Windows.Application.Current.Shutdown();
+            }
+            else
+            {
+                MessageBox.Show(
+                    _localization.Get("settings.admin_restart_failed"),
+                    _localization.Get("error.title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+            }
+        }
+
         private string GetSelectedFont()
         {
             return FontComboBox.SelectedItem as string ?? "Inter";
@@ -251,13 +326,37 @@ namespace HyTaLauncher
             settings.VerboseLogging = VerboseLoggingCheckBox.IsChecked == true;
             settings.AlwaysFullDownload = AlwaysFullDownloadCheckBox.IsChecked == true;
             settings.FontName = GetSelectedFont();
+            settings.RunGameAsAdmin = RunGameAsAdminCheckBox.IsChecked == true;
+            settings.RunServerAsAdmin = RunServerAsAdminCheckBox.IsChecked == true;
+            settings.RunLauncherAsAdmin = RunLauncherAsAdminCheckBox.IsChecked == true;
+            settings.BypassSslValidation = BypassSslCheckBox.IsChecked == true;
             _settingsManager.Save(settings);
-            
+
             // Применяем настройку логирования сразу
             LogService.VerboseLogging = settings.VerboseLogging;
-            
-            MessageBox.Show(_localization.Get("settings.saved"), 
-                _localization.Get("settings.success"), 
+
+            // Check if we need to restart as admin
+            if (settings.RunLauncherAsAdmin && !AdminHelper.IsRunningAsAdmin())
+            {
+                var result = MessageBox.Show(
+                    _localization.Get("settings.restart_admin_confirm"),
+                    _localization.Get("settings.admin"),
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    if (AdminHelper.RestartAsAdmin())
+                    {
+                        System.Windows.Application.Current.Shutdown();
+                        return;
+                    }
+                }
+            }
+
+            MessageBox.Show(_localization.Get("settings.saved"),
+                _localization.Get("settings.success"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Close();
         }
@@ -272,12 +371,12 @@ namespace HyTaLauncher
             {
                 var gameDir = GetGameDirectory();
                 var versionDirs = GetAllGameVersionDirs(gameDir);
-                
+
                 if (versionDirs.Count == 0)
                 {
                     throw new Exception("No game versions found");
                 }
-                
+
                 var cacheDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "HyTaLauncher", "cache"
@@ -291,33 +390,43 @@ namespace HyTaLauncher
                 var zipPath = Path.Combine(cacheDir, "ru.zip");
                 var extractPath = Path.Combine(cacheDir, "ru_temp");
 
-                // Пробуем скачать, если не получится - берём из Addons
+                // Сначала проверяем есть ли локальный файл в Addons
+                var addonsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Addons", "ru.zip");
                 bool downloadSuccess = false;
-                try
+
+                // Проверяем соединение с интернетом
+                bool hasConnection = await CheckConnectionAsync(RussifierUrl);
+
+                if (hasConnection)
                 {
-                    using var httpClient = new HttpClient();
-                    httpClient.Timeout = TimeSpan.FromMinutes(10);
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
-                    
-                    var response = await httpClient.GetAsync(RussifierUrl);
-                    response.EnsureSuccessStatusCode();
-                    
-                    await using (var fs = new FileStream(zipPath, FileMode.Create))
+                    // Пробуем скачать
+                    try
                     {
-                        await response.Content.CopyToAsync(fs);
-                    }
-                    downloadSuccess = true;
-                }
-                catch
-                {
-                    // Fallback: берём из папки Addons
-                    var addonsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Addons", "ru.zip");
-                    if (File.Exists(addonsPath))
-                    {
-                        RussifierStatusText.Text = _localization.Get("settings.russifier_from_local");
-                        File.Copy(addonsPath, zipPath, true);
+                        using var httpClient = new HttpClient();
+                        httpClient.Timeout = TimeSpan.FromMinutes(2);
+                        httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
+
+                        var response = await httpClient.GetAsync(RussifierUrl);
+                        response.EnsureSuccessStatusCode();
+
+                        await using (var fs = new FileStream(zipPath, FileMode.Create))
+                        {
+                            await response.Content.CopyToAsync(fs);
+                        }
                         downloadSuccess = true;
                     }
+                    catch
+                    {
+                        // Ошибка скачивания - попробуем локальный файл
+                    }
+                }
+
+                // Если не скачали - берём из Addons
+                if (!downloadSuccess && File.Exists(addonsPath))
+                {
+                    RussifierStatusText.Text = _localization.Get("settings.russifier_from_local");
+                    File.Copy(addonsPath, zipPath, true);
+                    downloadSuccess = true;
                 }
 
                 if (!downloadSuccess)
@@ -330,7 +439,7 @@ namespace HyTaLauncher
                 // Распаковываем
                 if (Directory.Exists(extractPath))
                     Directory.Delete(extractPath, true);
-                
+
                 ZipFile.ExtractToDirectory(zipPath, extractPath);
 
                 // Находим папку Client в архиве
@@ -365,7 +474,7 @@ namespace HyTaLauncher
                         {
                             BackupFiles(clientDestDir, backupDir, filesToBackup);
                         }
-                        
+
                         CopyDirectory(clientSourceDir, clientDestDir);
                         installedCount++;
                     }
@@ -380,7 +489,7 @@ namespace HyTaLauncher
                 RussifierStatusText.Text = string.Format(_localization.Get("settings.russifier_done"), installedCount);
                 RussifierStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x2e, 0xa0, 0x43));
-                
+
                 CheckBackupsAvailable();
             }
             catch (Exception ex)
@@ -411,19 +520,37 @@ namespace HyTaLauncher
             // Очищаем старый бэкап
             if (Directory.Exists(backupDir))
                 Directory.Delete(backupDir, true);
-            
+
             Directory.CreateDirectory(backupDir);
-            
+
             foreach (var relativePath in relativePaths)
             {
                 var sourceFile = Path.Combine(sourceDir, relativePath);
                 var backupFile = Path.Combine(backupDir, relativePath);
-                
+
                 if (File.Exists(sourceFile))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(backupFile)!);
                     File.Copy(sourceFile, backupFile, true);
                 }
+            }
+        }
+
+        private async Task<bool> CheckConnectionAsync(string url)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(5);
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+
+                var request = new HttpRequestMessage(HttpMethod.Head, url);
+                var response = await httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -454,12 +581,12 @@ namespace HyTaLauncher
             {
                 var gameDir = GetGameDirectory();
                 var versionDirs = GetAllGameVersionDirs(gameDir);
-                
+
                 if (versionDirs.Count == 0)
                 {
                     throw new Exception("No game versions found");
                 }
-                
+
                 var cacheDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "HyTaLauncher", "cache"
@@ -473,33 +600,43 @@ namespace HyTaLauncher
                 var zipPath = Path.Combine(cacheDir, "online.zip");
                 var extractPath = Path.Combine(cacheDir, "online_temp");
 
-                // Пробуем скачать, если не получится - берём из Addons
+                // Сначала проверяем есть ли локальный файл в Addons
+                var addonsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Addons", "online.zip");
                 bool downloadSuccess = false;
-                try
+
+                // Проверяем соединение с интернетом
+                bool hasConnection = await CheckConnectionAsync(OnlineFixUrl);
+
+                if (hasConnection)
                 {
-                    using var httpClient = new HttpClient();
-                    httpClient.Timeout = TimeSpan.FromMinutes(10);
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
-                    
-                    var response = await httpClient.GetAsync(OnlineFixUrl);
-                    response.EnsureSuccessStatusCode();
-                    
-                    await using (var fs = new FileStream(zipPath, FileMode.Create))
+                    // Пробуем скачать
+                    try
                     {
-                        await response.Content.CopyToAsync(fs);
-                    }
-                    downloadSuccess = true;
-                }
-                catch
-                {
-                    // Fallback: берём из папки Addons
-                    var addonsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Addons", "online.zip");
-                    if (File.Exists(addonsPath))
-                    {
-                        OnlineFixStatusText.Text = _localization.Get("settings.onlinefix_from_local");
-                        File.Copy(addonsPath, zipPath, true);
+                        using var httpClient = new HttpClient();
+                        httpClient.Timeout = TimeSpan.FromMinutes(2);
+                        httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36");
+
+                        var response = await httpClient.GetAsync(OnlineFixUrl);
+                        response.EnsureSuccessStatusCode();
+
+                        await using (var fs = new FileStream(zipPath, FileMode.Create))
+                        {
+                            await response.Content.CopyToAsync(fs);
+                        }
                         downloadSuccess = true;
                     }
+                    catch
+                    {
+                        // Ошибка скачивания - попробуем локальный файл
+                    }
+                }
+
+                // Если не скачали - берём из Addons
+                if (!downloadSuccess && File.Exists(addonsPath))
+                {
+                    OnlineFixStatusText.Text = _localization.Get("settings.onlinefix_from_local");
+                    File.Copy(addonsPath, zipPath, true);
+                    downloadSuccess = true;
                 }
 
                 if (!downloadSuccess)
@@ -512,7 +649,7 @@ namespace HyTaLauncher
                 // Распаковываем
                 if (Directory.Exists(extractPath))
                     Directory.Delete(extractPath, true);
-                
+
                 ZipFile.ExtractToDirectory(zipPath, extractPath);
 
                 // Получаем список файлов для бэкапа
@@ -529,7 +666,7 @@ namespace HyTaLauncher
                     {
                         BackupFiles(versionDir, backupDir, filesToBackup);
                     }
-                    
+
                     CopyDirectory(extractPath, versionDir);
                     installedCount++;
                 }
@@ -543,7 +680,7 @@ namespace HyTaLauncher
                 OnlineFixStatusText.Text = string.Format(_localization.Get("settings.onlinefix_done"), installedCount);
                 OnlineFixStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x2e, 0xa0, 0x43));
-                
+
                 CheckBackupsAvailable();
             }
             catch (Exception ex)
@@ -587,7 +724,7 @@ namespace HyTaLauncher
             var gameDir = GetGameDirectory();
             // Получаем текущую ветку (по умолчанию pre-release)
             var branch = "pre-release";
-            
+
             var advancedWindow = new AdvancedWindow(_settingsManager, _localization, gameDir, branch);
             advancedWindow.Owner = this;
             advancedWindow.ShowDialog();
@@ -629,11 +766,11 @@ namespace HyTaLauncher
 
                 // Удаляем бэкап после восстановления
                 Directory.Delete(backupDir, true);
-                
+
                 statusText.Text = string.Format(_localization.Get("settings.restore_done"), restoredCount);
                 statusText.Foreground = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x2e, 0xa0, 0x43));
-                
+
                 CheckBackupsAvailable();
             }
             catch (Exception ex)
