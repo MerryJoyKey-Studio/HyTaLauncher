@@ -39,6 +39,9 @@ This is an **open source project**! You can:
 
 ---
 
+## Security Notice
+Antivirus false positives are expected for unsigned binaries. HyTaLauncher is open source and safe.
+
 ## Features
 
 - Auto-download and install game files
@@ -207,4 +210,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left" />
  </picture>
 </a>
+
 
