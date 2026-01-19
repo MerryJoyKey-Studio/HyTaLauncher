@@ -9,65 +9,65 @@
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen">
 
-    <Border Background="{StaticResource BackgroundGradient}"
+	<Border Background="{StaticResource BackgroundGradient}"
             CornerRadius="12"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="36"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="90"/>
-            </Grid.RowDefinitions>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="36"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="90"/>
+			</Grid.RowDefinitions>
 
-            <!-- Title Bar -->
-            <Border Grid.Row="0" 
+			<!-- Title Bar -->
+			<Border Grid.Row="0"
                     Background="#08ffffff"
                     CornerRadius="12,12,0,0"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel Orientation="Horizontal" 
+				<Grid>
+					<StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Margin="12,0,0,0">
-                        <TextBlock Text="◆" 
-                                   FontSize="14" 
+						<TextBlock Text="◆"
+                                   FontSize="14"
                                    Foreground="{StaticResource AccentBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
-                        <TextBlock Text="HyTaLauncher" 
+						<TextBlock Text="HyTaLauncher"
                                    FontSize="12"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    VerticalAlignment="Center"/>
-                    </StackPanel>
+					</StackPanel>
 
-                    <StackPanel Orientation="Horizontal" 
+					<StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right">
-                        <Button Content="─" 
+						<Button Content="─"
                                 Style="{StaticResource WindowControlButton}"
                                 Click="MinimizeButton_Click"/>
-                        <Button Content="✕" 
+						<Button Content="✕"
                                 Style="{StaticResource CloseButton}"
                                 Click="CloseButton_Click"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+					</StackPanel>
+				</Grid>
+			</Border>
 
-            <!-- Main Content -->
-            <Grid Grid.Row="1" Margin="20,15,20,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="300"/>
-                </Grid.ColumnDefinitions>
+			<!-- Main Content -->
+			<Grid Grid.Row="1" Margin="20,15,20,10">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="300"/>
+				</Grid.ColumnDefinitions>
 
-                <!-- Left Side - News Feed -->
-                <Grid Grid.Column="0" Margin="0,0,15,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+				<!-- Left Side - News Feed -->
+				<Grid Grid.Column="0" Margin="0,0,15,0">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
 
-                    <TextBlock x:Name="NewsTitle"
+					<TextBlock x:Name="NewsTitle"
                                Grid.Row="0"
                                Text="NEWS"
                                FontSize="11"
@@ -75,135 +75,180 @@
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,0,0,10"/>
 
-                    <ScrollViewer Grid.Row="1" 
+					<ScrollViewer Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl x:Name="NewsItemsControl">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{StaticResource CardBackgroundBrush}"
+						<ItemsControl x:Name="NewsItemsControl">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Border Background="{StaticResource CardBackgroundBrush}"
                                             CornerRadius="8"
                                             Margin="0,0,0,10"
                                             Cursor="Hand"
                                             MouseLeftButtonDown="NewsItem_Click">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="140"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="140"/>
+												<ColumnDefinition Width="*"/>
+											</Grid.ColumnDefinitions>
 
-                                            <Border Grid.Column="0"
+											<Border Grid.Column="0"
                                                     CornerRadius="8,0,0,8"
                                                     Background="#1c2128">
-                                                <Image Source="{Binding FullImageUrl}"
+												<Image Source="{Binding FullImageUrl}"
                                                        Stretch="UniformToFill"
                                                        Height="90"/>
-                                            </Border>
+											</Border>
 
-                                            <StackPanel Grid.Column="1" 
+											<StackPanel Grid.Column="1"
                                                         Margin="12,10">
-                                                <TextBlock Text="{Binding Title}"
+												<TextBlock Text="{Binding Title}"
                                                            FontSize="13"
                                                            FontWeight="Bold"
                                                            Foreground="{StaticResource TextBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Description}"
+												<TextBlock Text="{Binding Description}"
                                                            FontSize="11"
                                                            Foreground="{StaticResource TextSecondaryBrush}"
                                                            TextWrapping="Wrap"
                                                            MaxHeight="50"
                                                            Margin="0,6,0,0"
                                                            TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
+											</StackPanel>
+										</Grid>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</ScrollViewer>
+					<Grid x:Name="NewsLoader"
+                      Grid.Row="1"
+                      Background="Transparent">
 
-                <!-- Right Side - Login Panel -->
-                <Border Grid.Column="1"
+						<Grid.Style>
+							<Style TargetType="Grid">
+								<Setter Property="Visibility" Value="Collapsed"/>
+								<Style.Triggers>
+									<DataTrigger Binding="{Binding ElementName=NewsItemsControl, Path=Items.Count}"
+                             Value="0">
+										<Setter Property="Visibility" Value="Visible"/>
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</Grid.Style>
+
+						<Viewbox
+                            Width="32"
+                            Height="32"
+                            Margin="15,15,0,8"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top">
+
+							<Ellipse
+                                Width="24"
+                                Height="24"
+                                Stroke="{StaticResource TextSecondaryBrush}"
+                                StrokeThickness="3"
+                                StrokeDashArray="2 6">
+								<Ellipse.Triggers>
+									<EventTrigger RoutedEvent="Loaded">
+										<BeginStoryboard>
+											<Storyboard RepeatBehavior="Forever">
+												<DoubleAnimation
+                                                    Storyboard.TargetProperty="StrokeDashOffset"
+                                                    From="0"
+                                                    To="8"
+                                                    Duration="0:0:0.8"/>
+											</Storyboard>
+										</BeginStoryboard>
+									</EventTrigger>
+								</Ellipse.Triggers>
+							</Ellipse>
+						</Viewbox>
+					</Grid>
+				</Grid>
+
+				<!-- Right Side - Login Panel -->
+				<Border Grid.Column="1"
                         Background="{StaticResource CardBackgroundBrush}"
                         CornerRadius="10"
                         Padding="20">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
 
-                        <!-- Logo -->
-                        <Grid Grid.Row="0" Margin="0,0,0,20" HorizontalAlignment="Center">
-                            <!-- Image Logo (загружается с сервера) -->
-                            <Image x:Name="LogoImage"
+						<!-- Logo -->
+						<Grid Grid.Row="0" Margin="0,0,0,20" HorizontalAlignment="Center">
+							<!-- Image Logo (загружается с сервера) -->
+							<Image x:Name="LogoImage"
                                    Source="https://hytale.com/static/images/logo.png"
                                    Height="92"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center">
-                                <Image.Effect>
-                                    <DropShadowEffect Color="#2ea043" 
-                                                      BlurRadius="20" 
+								<Image.Effect>
+									<DropShadowEffect Color="#2ea043"
+                                                      BlurRadius="20"
                                                       ShadowDepth="0"
                                                       Opacity="0.4"/>
-                                </Image.Effect>
-                            </Image>
-                            
-                            <!-- Text Logo (fallback если картинка не загрузилась) -->
-                            <TextBlock x:Name="LogoText"
+								</Image.Effect>
+							</Image>
+
+							<!-- Text Logo (fallback если картинка не загрузилась) -->
+							<TextBlock x:Name="LogoText"
                                        Text="HYTALE"
                                        FontSize="60"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrush}"
                                        HorizontalAlignment="Center"
                                        Visibility="Collapsed">
-                                <TextBlock.Effect>
-                                    <DropShadowEffect Color="#2ea043" 
-                                                      BlurRadius="20" 
+								<TextBlock.Effect>
+									<DropShadowEffect Color="#2ea043"
+                                                      BlurRadius="20"
                                                       ShadowDepth="0"
                                                       Opacity="0.4"/>
-                                </TextBlock.Effect>
-                            </TextBlock>
-                        </Grid>
+								</TextBlock.Effect>
+							</TextBlock>
+						</Grid>
 
-                        <!-- Form -->
-                        <StackPanel Grid.Row="1" VerticalAlignment="Top">
-                            
-                            <!-- Nickname -->
-                            <TextBlock x:Name="NicknameLabel"
+						<!-- Form -->
+						<StackPanel Grid.Row="1" VerticalAlignment="Top">
+
+							<!-- Nickname -->
+							<TextBlock x:Name="NicknameLabel"
                                        Text="NICKNAME"
                                        FontSize="10"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        Margin="0,0,0,6"/>
-                            <TextBox x:Name="NicknameTextBox"
+							<TextBox x:Name="NicknameTextBox"
                                      Style="{StaticResource ModernTextBox}"
                                      Height="38"
                                      Margin="0,0,0,15"/>
 
-                            <!-- Version -->
-                            <TextBlock x:Name="VersionLabel"
+							<!-- Version -->
+							<TextBlock x:Name="VersionLabel"
                                        Text="VERSION"
                                        FontSize="10"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        Margin="0,0,0,6"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="36"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="VersionComboBox"
+							<Grid Margin="0,0,0,8">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="36"/>
+								</Grid.ColumnDefinitions>
+								<ComboBox x:Name="VersionComboBox"
                                           Style="{StaticResource ModernComboBox}"
                                           ItemContainerStyle="{StaticResource ModernComboBoxItem}"
                                           DisplayMemberPath="Name"
                                           Height="36"
                                           IsEnabled="False"
                                           SelectionChanged="VersionComboBox_SelectionChanged"/>
-                                <Button x:Name="RefreshButton"
+								<Button x:Name="RefreshButton"
                                         Grid.Column="1"
                                         Content="↻"
                                         Width="28"
@@ -213,47 +258,47 @@
                                         Padding="0"
                                         FontSize="14"
                                         Click="RefreshVersions_Click"/>
-                            </Grid>
-                            
-                            <!-- Branch -->
-                            <TextBlock x:Name="BranchLabel"
+							</Grid>
+
+							<!-- Branch -->
+							<TextBlock x:Name="BranchLabel"
                                        Text="BRANCH"
                                        FontSize="10"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        Margin="0,0,0,6"/>
-                            <ComboBox x:Name="BranchComboBox"
+							<ComboBox x:Name="BranchComboBox"
                                       Style="{StaticResource ModernComboBox}"
                                       ItemContainerStyle="{StaticResource ModernComboBoxItem}"
                                       SelectedIndex="1"
                                       Height="36"
                                       SelectionChanged="BranchComboBox_SelectionChanged"
                                       Margin="0,0,0,15">
-                                <ComboBoxItem Content="release"/>
-                                <ComboBoxItem Content="pre-release"/>
-                                <ComboBoxItem Content="beta"/>
-                                <ComboBoxItem Content="alpha"/>
-                            </ComboBox>
-                            
-                            <!-- Modpack -->
-                            <TextBlock x:Name="ModpackLabel"
+								<ComboBoxItem Content="release"/>
+								<ComboBoxItem Content="pre-release"/>
+								<ComboBoxItem Content="beta"/>
+								<ComboBoxItem Content="alpha"/>
+							</ComboBox>
+
+							<!-- Modpack -->
+							<TextBlock x:Name="ModpackLabel"
                                        Text="MODPACK"
                                        FontSize="10"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        Margin="0,0,0,6"/>
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="36"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="ModpackComboBox"
+							<Grid Margin="0,0,0,20">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="36"/>
+								</Grid.ColumnDefinitions>
+								<ComboBox x:Name="ModpackComboBox"
                                           Style="{StaticResource ModernComboBox}"
                                           ItemContainerStyle="{StaticResource ModernComboBoxItem}"
                                           DisplayMemberPath="Name"
                                           Height="36"
                                           SelectionChanged="ModpackComboBox_SelectionChanged"/>
-                                <Button x:Name="OpenModsButton"
+								<Button x:Name="OpenModsButton"
                                         Grid.Column="1"
                                         Content="📦"
                                         Width="28"
@@ -264,42 +309,42 @@
                                         FontSize="14"
                                         Click="OpenMods_Click"
                                         ToolTip="Manage Modpacks"/>
-                            </Grid>
+							</Grid>
 
-                            <!-- Progress -->
-                            <StackPanel x:Name="ProgressPanel" 
+							<!-- Progress -->
+							<StackPanel x:Name="ProgressPanel"
                                         Visibility="Collapsed"
                                         Margin="0,0,0,15">
-                                <TextBlock x:Name="StatusText"
+								<TextBlock x:Name="StatusText"
                                            Text="Preparing..."
                                            FontSize="10"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            Margin="0,0,0,6"/>
-                                <ProgressBar x:Name="DownloadProgress"
+								<ProgressBar x:Name="DownloadProgress"
                                              Style="{StaticResource ModernProgressBar}"
                                              Value="0"
                                              Maximum="100"/>
-                                <TextBlock x:Name="ProgressPercent"
+								<TextBlock x:Name="ProgressPercent"
                                            Text="0%"
                                            FontSize="10"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            HorizontalAlignment="Right"
                                            Margin="0,4,0,0"/>
-                                <TextBlock x:Name="VpnHintText"
+								<TextBlock x:Name="VpnHintText"
                                            Text="If download is slow, try using VPN"
                                            FontSize="9"
                                            Foreground="#ff9800"
                                            TextWrapping="Wrap"
                                            Margin="0,6,0,0"/>
-                            </StackPanel>
+							</StackPanel>
 
-                            <!-- Play Button -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Button x:Name="PlayButton"
+							<!-- Play Button -->
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
+								<Button x:Name="PlayButton"
                                         Grid.Column="0"
                                         Content="PLAY"
                                         Style="{StaticResource ModernButton}"
@@ -308,7 +353,7 @@
                                         FontWeight="Bold"
                                         Height="42"
                                         Padding="0"/>
-                                <Button x:Name="ReinstallButton"
+								<Button x:Name="ReinstallButton"
                                         Grid.Column="1"
                                         Content="🔄"
                                         Style="{StaticResource ModernButton}"
@@ -321,10 +366,10 @@
                                         Padding="0"
                                         ToolTip="Reinstall"
                                         Visibility="Collapsed"/>
-                            </Grid>
-                            
-                            <!-- Start Server Button -->
-                            <Button x:Name="StartServerButton"
+							</Grid>
+
+							<!-- Start Server Button -->
+							<Button x:Name="StartServerButton"
                                     Style="{StaticResource ModernButton}"
                                     Background="{StaticResource CardBackgroundBrush}"
                                     Click="StartServerButton_Click"
@@ -333,16 +378,16 @@
                                     Margin="0,8,0,0"
                                     Padding="0"
                                     Visibility="Collapsed">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🖥️" Margin="0,0,6,0"/>
-                                    <TextBlock x:Name="StartServerText" Text="Start Server"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="🖥️" Margin="0,0,6,0"/>
+									<TextBlock x:Name="StartServerText" Text="Start Server"/>
+								</StackPanel>
+							</Button>
+						</StackPanel>
 
-                        <!-- Language & Settings -->
-                        <Grid Grid.Row="2" Margin="0,15,0,0">
-                            <ComboBox x:Name="LanguageComboBox"
+						<!-- Language & Settings -->
+						<Grid Grid.Row="2" Margin="0,15,0,0">
+							<ComboBox x:Name="LanguageComboBox"
                                       Style="{StaticResource ModernComboBox}"
                                       ItemContainerStyle="{StaticResource ModernComboBoxItem}"
                                       HorizontalAlignment="Left"
@@ -351,157 +396,157 @@
                                       FontSize="11"
                                       Padding="8,6"
                                       SelectionChanged="LanguageComboBox_SelectionChanged"/>
-                            
-                            <StackPanel Orientation="Horizontal"
+
+							<StackPanel Orientation="Horizontal"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center">
-                                <TextBlock x:Name="ModsLink"
+								<TextBlock x:Name="ModsLink"
                                            Text="🧩 Mods"
                                            FontSize="11"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            Cursor="Hand"
                                            Margin="0,0,15,0"
                                            MouseLeftButtonDown="Mods_Click">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock x:Name="SettingsLink"
+									<TextBlock.Style>
+										<Style TargetType="TextBlock">
+											<Style.Triggers>
+												<Trigger Property="IsMouseOver" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+												</Trigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
+								<TextBlock x:Name="SettingsLink"
                                            Text="⚙ Settings"
                                            FontSize="11"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            Cursor="Hand"
                                            MouseLeftButtonDown="Settings_Click">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </Grid>
+									<TextBlock.Style>
+										<Style TargetType="TextBlock">
+											<Style.Triggers>
+												<Trigger Property="IsMouseOver" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+												</Trigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
+							</StackPanel>
+						</Grid>
+					</Grid>
+				</Border>
+			</Grid>
 
-            <!-- Bottom Bar -->
-            <Border Grid.Row="2"
+			<!-- Bottom Bar -->
+			<Border Grid.Row="2"
                     Background="#08ffffff"
                     CornerRadius="0,0,12,12"
                     Padding="20,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
 
-                    <!-- Left: Social Links -->
-                    <StackPanel Grid.Column="0"
+					<!-- Left: Social Links -->
+					<StackPanel Grid.Column="0"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <!-- Website Button -->
-                        <Border Background="{StaticResource CardBackgroundBrush}"
+						<!-- Website Button -->
+						<Border Background="{StaticResource CardBackgroundBrush}"
                                 CornerRadius="6"
                                 Padding="10,6"
                                 Margin="0,0,10,0"
                                 Cursor="Hand"
                                 MouseLeftButtonDown="Website_Click">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#1a2f1a"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🌐"
+							<Border.Style>
+								<Style TargetType="Border">
+									<Style.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter Property="Background" Value="#1a2f1a"/>
+										</Trigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<StackPanel Orientation="Horizontal">
+								<TextBlock Text="🌐"
                                            FontSize="14"
                                            Foreground="{StaticResource AccentBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock x:Name="WebsiteText"
+								<TextBlock x:Name="WebsiteText"
                                            Text="Website"
                                            FontSize="11"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Discord Button -->
-                        <Border Background="{StaticResource CardBackgroundBrush}"
+							</StackPanel>
+						</Border>
+
+						<!-- Discord Button -->
+						<Border Background="{StaticResource CardBackgroundBrush}"
                                 CornerRadius="6"
                                 Padding="10,6"
                                 Cursor="Hand"
                                 MouseLeftButtonDown="Discord_Click">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#1a1f3a"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="💬"
+							<Border.Style>
+								<Style TargetType="Border">
+									<Style.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter Property="Background" Value="#1a1f3a"/>
+										</Trigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<StackPanel Orientation="Horizontal">
+								<TextBlock Text="💬"
                                            FontSize="14"
                                            Foreground="#5865F2"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock x:Name="DiscordText"
+								<TextBlock x:Name="DiscordText"
                                            Text="Discord"
                                            FontSize="11"
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+							</StackPanel>
+						</Border>
+					</StackPanel>
 
-                    <!-- Center: Info -->
-                    <StackPanel Grid.Column="1"
+					<!-- Center: Info -->
+					<StackPanel Grid.Column="1"
                                 VerticalAlignment="Center">
-                        <TextBlock x:Name="FooterText"
+						<TextBlock x:Name="FooterText"
                                    Text="HyTaLauncher v1.0.6 • Unofficial launcher"
                                    FontSize="10"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,4"/>
-                        <StackPanel Orientation="Horizontal"
+						<StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Center">
-                            <TextBlock x:Name="DisclaimerText"
+							<TextBlock x:Name="DisclaimerText"
                                        Text="This is a non-commercial fan project. After trying the game, please purchase it at"
                                        FontSize="9"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,4,0"/>
-                            <TextBlock Text="store.hytale.com"
+							<TextBlock Text="store.hytale.com"
                                        FontSize="9"
                                        Foreground="{StaticResource AccentBrush}"
                                        Cursor="Hand"
                                        VerticalAlignment="Center"
                                        MouseLeftButtonDown="Store_Click"/>
-                        </StackPanel>
-                    </StackPanel>
+						</StackPanel>
+					</StackPanel>
 
-                    <!-- Right: Placeholder for balance -->
-                    <StackPanel Grid.Column="2"
+					<!-- Right: Placeholder for balance -->
+					<StackPanel Grid.Column="2"
                                 VerticalAlignment="Center"
                                 Visibility="Collapsed"/>
-                </Grid>
-            </Border>
-        </Grid>
-    </Border>
+				</Grid>
+			</Border>
+		</Grid>
+	</Border>
 </Window>
