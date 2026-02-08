@@ -21,7 +21,7 @@
 </p>
 
 <h2 align="center">
-На хостинг - <a href="https://pay.cloudtips.ru/p/cf634f74">[Поддержать проект]</a> + поддержка сервера онлайн-фикса.
+На хостинг - <a href="https://pay.cloudtips.ru/p/cf634f74">[Поддержать проект]</a> + поддержка сервера онлайн-фикса.<br>+ к мотивации
 </h2>
 <p align="center">
   Собранно - <b>[500₽ из 7000₽]</b> (на год)
@@ -217,6 +217,7 @@ HyTaLauncher включает интеграцию с CurseForge для упра
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=MerryJoyKey-Studio/HyTaLauncher&type=date&legend=top-left" />
  </picture>
 </a>
+
 
 
 
